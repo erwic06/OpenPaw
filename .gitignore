@@ -1,0 +1,25 @@
+# Secrets
+secrets.env
+.env
+.env.*
+
+# SQLite
+sessions.db
+sessions.db-wal
+sessions.db-shm
+
+# Decision log
+data/decisions.jsonl
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor swap/temp
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
