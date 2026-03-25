@@ -15,6 +15,7 @@ services:
       - anthropic_api_key
       - openai_api_key
       - telegram_bot_token
+      - telegram_chat_id
       - gemini_api_key
     ports:
       - "9999:9999"
@@ -26,6 +27,8 @@ secrets:
     file: ~/.nanoclaw/secrets/openai_api_key
   telegram_bot_token:
     file: ~/.nanoclaw/secrets/telegram_bot_token
+  telegram_chat_id:
+    file: ~/.nanoclaw/secrets/telegram_chat_id
   gemini_api_key:
     file: ~/.nanoclaw/secrets/gemini_api_key
 

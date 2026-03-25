@@ -24,15 +24,18 @@
 ---
 
 ### 2.2 -- Telegram Messaging Integration
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/2.2-telegram-integration.md
 - **Dependencies:** 2.1
 - **Assigned:** interactive
-- **Artifacts:** `src/messaging/telegram.ts`
+- **Artifacts:** `src/messaging/telegram.ts`, `src/messaging/index.ts`
 - **Acceptance:** Bot connects, receives commands, sends messages
 
 #### Notes
+- grammy 1.41.1 (long-polling mode); HTML parse mode for alert formatting
+- telegram_chat_id added as Docker Compose secret
+- tsconfig: added allowImportingTsExtensions for Bun .ts import convention
 #### Failure History
 
 ---
@@ -98,3 +101,4 @@
 | Session | Date | Task | Status | Duration | Notes |
 |---------|------|------|--------|----------|-------|
 | 1       | 2026-03-25 | 2.1  | complete | —      | Docker infra created: multi-stage Dockerfile, docker-compose.yml with secrets/volumes/security hardening, health check endpoint, secrets loader. All acceptance criteria verified. |
+| 2       | 2026-03-25 | 2.2  | complete | —      | Telegram bot module: grammy 1.41.1, sendMessage/onMessage/formatAlert, auth filtering, HTML alert formatting. Docker build verified. |
