@@ -26,8 +26,11 @@ Mission Control: Technical Design Document
           T21["21st.dev<br/>UI components"]
       end
 
+      subgraph BrowserAuto["Browser Automation"]
+          BU["BrowserUse CLI 2<br/>direct CDP, dual-mode"]
+      end
+
       subgraph Research["Research Infrastructure"]
-          BU["BrowserUse<br/>visual web browsing"]
           Ded["Dedalus Labs<br/>hosted MCP servers"]
       end
 
@@ -205,6 +208,55 @@ Mission Control: Technical Design Document
   concurrent projects requires either separate repos (simple) or a project_id dimension in the plan schema.
   Defer until the need is demonstrated.
 
+  Agent Abstraction Layer
+
+  NanoClaw orchestrates two kinds of agents through a uniform interface:
+
+  1. LLM-native agents — Planner, Coder, Researcher, Reviewer, and LLM-based custom agents. These run as
+     API sessions against LLM providers (Anthropic, OpenAI, Google). NanoClaw manages the session lifecycle
+     via the Agents SDK or direct API calls.
+
+  2. External service agents — standalone services with their own APIs (e.g., a calendar agent, a social
+     media posting service). NanoClaw triggers them via HTTP and monitors their status.
+
+  Both types implement the same interface from NanoClaw's perspective:
+
+  interface AgentAdapter {
+    trigger(input: AgentInput): Promise<string>        // returns session_id
+    status(sessionId: string): Promise<AgentStatus>    // running | complete | failed | waiting_hitl
+    output(sessionId: string): Promise<AgentOutput>    // retrieve results/artifacts
+    cancel(sessionId: string): Promise<void>           // abort a running session
+  }
+
+  Two adapter implementations:
+
+  LLMAdapter
+    - Wraps Agents SDK / direct API calls
+    - Manages model selection, fallback chains, token tracking
+    - Used by: Planner, Coder, Researcher, Reviewer, LLM-based custom agents
+
+  ServiceAdapter
+    - Wraps HTTP calls to external service APIs
+    - Config per agent: base_url, auth (API key or OAuth token), health_check endpoint
+    - Polls status via GET or receives webhook callbacks
+    - Used by: calendar agent, future social media posting services, any standalone service
+
+  Agent definition files (agents/<name>/agent.md) gain a new field:
+
+  ## Adapter
+  type: service                          # "llm" (default) or "service"
+  base_url: http://localhost:8100
+  auth: bearer ${CALENDAR_AGENT_TOKEN}   # references secrets.env
+  health_check: /health
+  trigger_endpoint: POST /tasks
+  status_endpoint: GET /tasks/{session_id}
+  output_endpoint: GET /tasks/{session_id}/output
+
+  For LLM agents, the adapter section is optional (defaults to type: llm with model/provider from Identity).
+
+  HITL gates, cost tracking, scheduling, and output routing all operate above the adapter layer — they work
+  identically regardless of whether the underlying agent is an LLM session or an HTTP service.
+
   ---
   2. Sandboxing & Security
 
@@ -260,11 +312,11 @@ Mission Control: Technical Design Document
 
   ┌────────────┬─────────────────┬────────┬─────────┬──────────┬────────────┬───────┬──────────┬──────────┐
   │   Agent    │     LLM API     │ Vercel │ Daytona │ 21st.dev │ BrowserUse │ Cubic │ Dedalus  │ General  │
-  │            │                 │        │         │          │            │       │   MCP    │   web    │
+  │            │                 │        │         │          │  CLI/Cloud │       │   MCP    │   web    │
   ├────────────┼─────────────────┼────────┼─────────┼──────────┼────────────┼───────┼──────────┼──────────┤
   │ Planner    │ Anthropic       │ —      │ —       │ —        │ —          │ —     │ —        │ —        │
   ├────────────┼─────────────────┼────────┼─────────┼──────────┼────────────┼───────┼──────────┼──────────┤
-  │ Coder      │ Anthropic,      │ ✓      │ ✓       │ ✓        │ —          │ ✓     │ —        │ —        │
+  │ Coder      │ Anthropic,      │ ✓      │ ✓       │ ✓        │ ✓          │ ✓     │ —        │ —        │
   │            │ OpenAI          │        │         │          │            │       │          │          │
   ├────────────┼─────────────────┼────────┼─────────┼──────────┼────────────┼───────┼──────────┼──────────┤
   │            │ Gemini,         │        │         │          │            │       │          │          │
@@ -273,7 +325,14 @@ Mission Control: Technical Design Document
   ├────────────┼─────────────────┼────────┼─────────┼──────────┼────────────┼───────┼──────────┼──────────┤
   │ Reviewer   │ Anthropic,      │ —      │ —       │ —        │ —          │ ✓     │ —        │ —        │
   │            │ Gemini          │        │         │          │            │       │          │          │
+  ├────────────┼─────────────────┼────────┼─────────┼──────────┼────────────┼───────┼──────────┼──────────┤
+  │ Custom     │ Configurable    │ —      │ —       │ —        │ ✓          │ —     │ —        │ ✓        │
+  │            │                 │        │         │          │            │       │          │          │
   └────────────┴─────────────────┴────────┴─────────┴──────────┴────────────┴───────┴──────────┴──────────┘
+
+  BrowserUse access note: BrowserUse is a general-purpose tool. Coder uses it for web UI testing and
+  verification. Researcher uses it for source browsing. Custom agents can be granted access via their agent
+  definition. Planner and Reviewer don't need browser access.
 
   Enforcement: NanoClaw's Docker container uses network rules to restrict outbound connections per agent
   session. In practice, since agents operate via API calls through NanoClaw, the enforcement is at the tool
@@ -283,7 +342,7 @@ Mission Control: Technical Design Document
 
   - API keys stored in ~/.nanoclaw/secrets.env, mounted read-only into NanoClaw's container.
   - NanoClaw injects only the keys each agent needs into its session context. The Researcher never sees the
-  Vercel deploy token. The Coder never sees the BrowserUse key.
+  Vercel deploy token. Agents without BrowserUse access never see the BrowserUse Cloud API key.
   - Git repo .gitignore includes secrets.env, sessions.db, and any .env files.
   - DEFERRED: Automated key rotation. Manual rotation for now. At 4 agents and ~12 keys, manual is manageable.
   Automate when the key count or team size justifies it.
@@ -312,6 +371,14 @@ Mission Control: Technical Design Document
   │            │  good work      │ modification)      │                                    │              │
   └────────────┴─────────────────┴────────────────────┴────────────────────────────────────┴──────────────┘
 
+  ┌────────────┬─────────────────┬────────────────────┬────────────────────────────────────┬──────────────┐
+  │ External   │ Sends unwanted  │ External           │ Gate 6 (External Communication)    │ Revoke       │
+  │ Service    │ communications, │ communications +   │ blocks all outbound content.        │ service API  │
+  │ Agent      │ drains external │ external service   │ ServiceAdapter health checks detect │ keys.        │
+  │            │ service quotas  │ quota              │ runaway agents. Budget gate (Gate 5)│ Review       │
+  │            │                 │                    │ limits spend.                       │ sent items   │
+  └────────────┴─────────────────┴────────────────────┴────────────────────────────────────┴──────────────┘
+
   Most dangerous scenario: Headless Coder deploys bad code to production. This requires:
   1. Coder writes bad code (possible)
   2. Tests pass despite bad code (possible if tests are weak)
@@ -322,6 +389,50 @@ Mission Control: Technical Design Document
   Steps 4 and 5 cannot both happen for production deploys — the deploy gate is mandatory and never
   auto-approved for production. The realistic worst case is: bad code reaches staging, is caught during deploy
   review, and reverted. Cost: one wasted Coder session + one deploy review cycle.
+
+  ---
+  2b. BrowserUse CLI — General-Purpose Browser Automation
+
+  BrowserUse CLI 2 is a general-purpose browser automation tool that uses direct ChromeDevTools Protocol
+  (CDP) — not Playwright. Any NanoClaw agent can invoke it as a subprocess when it needs browser interaction.
+
+  Dual-Mode Architecture
+
+  NanoClaw provides BrowserUse in two modes. Agent definitions specify which mode to use:
+
+  1. CLI mode (local)
+     - BrowserUse CLI installed on the Mac Mini: curl -fsSL https://browser-use.com/cli/install.sh | bash
+     - Agents invoke it as a subprocess: browser-use open <url>, browser-use state, etc.
+     - Direct CDP connection to a local Chromium instance
+     - Free (no API credits consumed)
+     - Best for: quick interactions, local web UI testing, lightweight browsing tasks
+
+  2. Cloud API mode (remote)
+     - HTTP calls to BrowserUse Cloud infrastructure
+     - Browser runs remotely — no local Chromium needed
+     - Consumes BrowserUse Cloud credits ($1,000+ available)
+     - Best for: heavy research sessions, parallel browsing, long-running scraping, complex multi-page flows
+
+  Agent definitions configure BrowserUse access:
+
+  ## Tools
+  - browseruse:
+      mode: cli                    # cli | cloud | both
+      headless: true               # default true (CLI mode only)
+
+  When mode is "both", NanoClaw selects the mode based on task context: CLI for quick/local tasks,
+  Cloud for heavy/parallel tasks. The selection heuristic is configurable per agent.
+
+  Integration Pattern
+
+  NanoClaw wraps BrowserUse in a tool definition that agents can invoke. The wrapper:
+  - Selects CLI or Cloud mode based on agent config
+  - For CLI: spawns browser-use as a subprocess, captures structured output
+  - For Cloud: makes HTTP calls to BrowserUse Cloud API with the Cloud API key from secrets.env
+  - Returns structured results (page content, screenshots, element state) to the agent
+
+  This makes BrowserUse a first-class tool alongside file I/O, web search, and code execution — any
+  agent with BrowserUse access can control a browser when its task requires it.
 
   ---
   3. HITL Approval Gates
@@ -441,9 +552,32 @@ Mission Control: Technical Design Document
   │ policy         │                                                                                       │
   └────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 
-  Note: No current workflow involves external communication. This gate exists as a guardrail against future
-  scope expansion or agent hallucination of communication actions. The agent roster does not include
-  communication tools, so this gate should never fire. If it does, that's a bug.
+  This gate is a first-class feature. Social media agents, outreach agents, and any future agent that sends
+  content to the outside world must pass through this gate. The gate fires for any tool call that would
+  transmit content to an external recipient (social media API, email API, messaging API). Internal
+  notifications (Telegram alerts to the owner) are exempt — this gate covers outbound communication to
+  third parties only.
+
+  Content pending approval is queued in SQLite and surfaced in the OpenPaw Web dashboard's content review
+  section (see Section 8). The dashboard shows: full message content, recipient/platform, originating task,
+  and approve/edit/reject controls. Editing allows the human to modify the content before approving.
+
+  SQLite schema addition for communication gate:
+
+  CREATE TABLE pending_communications (
+      id TEXT PRIMARY KEY,
+      gate_id TEXT REFERENCES hitl_gates(id),
+      agent_id TEXT,
+      platform TEXT NOT NULL,              -- twitter | email | linkedin | slack_external | ...
+      recipient TEXT,                      -- email address, @handle, channel, etc.
+      content_type TEXT NOT NULL,          -- text | html | media
+      content TEXT NOT NULL,               -- the actual message/post content
+      metadata TEXT,                       -- json: attachments, scheduling preferences, thread context
+      created_at TIMESTAMP NOT NULL,
+      decided_at TIMESTAMP,
+      decision TEXT,                       -- approved | approved_edited | rejected
+      edited_content TEXT                  -- non-null if human edited before approving
+  );
 
   ---
   4. Failure Modes & Recovery
@@ -759,7 +893,8 @@ Mission Control: Technical Design Document
   1. Create Researcher agent system prompt with research-specific heuristics (start broad then narrow, source
   evaluation, citation requirements)
   2. Configure Gemini 2.5 Pro integration in NanoClaw
-  3. Integrate BrowserUse: Researcher can invoke visual browsing for complex web interactions
+  3. Install BrowserUse CLI 2 on Mac Mini. Implement dual-mode BrowserUse tool wrapper (CLI subprocess +
+  Cloud API). Make available as a configurable tool for any agent (Researcher, Coder, custom agents)
   4. Create research contract template with output format requirements (structured report, citations, source
   list)
   5. Create Reviewer agent system prompt with adversarial fact-checking instructions
@@ -970,6 +1105,13 @@ Agents
   GET    /api/agents/:id                  — agent detail + schedule
   POST   /api/agents/:id/trigger          — manually trigger a scheduled agent
   GET    /api/agents/:id/runs             — run history for agent
+  GET    /api/agents/:id/health           — health check for service-type agents
+
+Content Review (External Communications)
+  GET    /api/communications/pending      — list pending outbound communications awaiting approval
+  GET    /api/communications/:id          — full content + metadata for a pending communication
+  POST   /api/communications/:id/decide   — approve, edit+approve, or reject
+  Body: { "decision": "approved" | "approved_edited" | "rejected", "edited_content": "..." }
 
 Cost
   GET    /api/cost/daily                  — daily spend breakdown
@@ -1138,9 +1280,49 @@ List of all agent definitions with status, schedule, and controls.
 │  │                                                                                         │
 └──┴─────────────────────────────────────────────────────────────────────────────────────────┘
 
+--- Content Review Tab ---
+
+Queue of outbound communications awaiting approval. Any agent that triggers Gate 6 (External Communication)
+places its content here. This is the primary review interface for social media posts, outreach emails, and
+any other external-facing content.
+
+┌──┬─────────────────────────────────────────────────────────────────────────────────────────┐
+│  │  Content Review                                                          3 pending      │
+│OV│                                                                                         │
+│  │  ┌─ Twitter Post ────────────────────────────────────────────────────────────────────┐  │
+│RE│  │ Agent: Twitter Poster · Triggered by: commit abc123 to main                       │  │
+│  │  │                                                                                    │  │
+│PR│  │ "Just shipped real-time session streaming in OpenPaw 🚀                           │  │
+│  │  │  Now you can watch your AI agents work live from the dashboard.                    │  │
+│AU│  │  #buildinpublic #AIagents"                                                        │  │
+│  │  │                                                                                    │  │
+│CR│  │ [✓ Approve]  [✎ Edit & Approve]  [✗ Reject]                    2 min ago           │  │
+│  │  └───────────────────────────────────────────────────────────────────────────────────┘  │
+│  │  ┌─ Outreach Email ──────────────────────────────────────────────────────────────────┐  │
+│  │  │ Agent: Cold Outreach · To: jane@example.com                                       │  │
+│  │  │                                                                                    │  │
+│  │  │ Subject: Quick question about your API integration...                              │  │
+│  │  │ "Hi Jane, I noticed your company recently launched..."                             │  │
+│  │  │                                                                                    │  │
+│  │  │ [✓ Approve]  [✎ Edit & Approve]  [✗ Reject]                    15 min ago          │  │
+│  │  └───────────────────────────────────────────────────────────────────────────────────┘  │
+│  │                                                                                         │
+│  │  RECENTLY DECIDED                                                                       │
+│  │  ┌──────────────────────────────────────────────────────────────────────────────────┐   │
+│  │  │ LinkedIn Post · Approved (edited) · 1 hour ago                                   │   │
+│  │  │ Twitter Post  · Approved · 3 hours ago                                           │   │
+│  │  │ Outreach Email · Rejected · Yesterday                                            │   │
+│  │  └──────────────────────────────────────────────────────────────────────────────────┘   │
+│  │                                                                                         │
+└──┴─────────────────────────────────────────────────────────────────────────────────────────┘
+
+Edit & Approve opens an inline editor pre-filled with the agent's draft. The human can modify the
+content before approving. The edited version is what gets sent. Original and edited versions are both
+stored for audit.
+
 Navigation summary:
-- Left tab bar (always visible): Overview | Research | Projects | Automations
-- Top header (always visible): Command input bar, daily spend
+- Left tab bar (always visible): Overview | Research | Projects | Content Review | Automations
+- Top header (always visible): Command input bar, daily spend, pending content badge
 - Secondary sidebar (Projects only): Appears inside a project workspace, shows task list
 - Panels: Tiled session views inside Project workspace and Research detail views
 
@@ -1183,7 +1365,9 @@ for an AI/ML engineer focused on agentic systems and developer tools.
 cron: "0 20 * * *"  # Every day at 8:00 PM
 
 ## Tools
-- browseruse: true
+- browseruse:
+    mode: cloud
+    headless: true
 - web_search: true
 - file_write: true
 
@@ -1379,34 +1563,41 @@ Build:
 8. Build "New Task" flow: type picker → prompt → depth slider → cost estimate → approve
 9. Build HITL gate inline UI (approve/edit/deny buttons in session panels)
 10. Build cost display (daily spend in header, per-session cost in panels)
-11. Deploy frontend to Vercel
+11. Build Content Review tab: pending communications queue, approve/edit/reject controls, history
+12. Deploy frontend to Vercel
 
 Validates: Full dashboard with real-time session visibility. Tasks can be created from webapp. HITL
-gates can be resolved from webapp. Auth works end-to-end.
+gates can be resolved from webapp. Content review queue shows pending communications. Auth works
+end-to-end.
 
 Exit criteria: All functionality available via Telegram is also available via webapp. Real-time
-streaming shows live session activity. Auth blocks unauthorized access.
+streaming shows live session activity. Content review approve/edit/reject flow works. Auth blocks
+unauthorized access.
 
 ---
 Phase 8: Agent Fleet & Scheduling
 
-What: Add scheduling infrastructure and custom agent support.
+What: Add scheduling infrastructure, custom agent support, and the ServiceAdapter for external agents.
 
 Build:
-1. Implement scheduler module in NanoClaw (cron evaluation loop, event listener)
-2. Implement agent definition parser (reads agents/<name>/agent.md files)
-3. Add agent_definitions and agent_runs tables to SQLite
-4. Implement fswatch on agents/ directory for hot-reload of agent definitions
-5. Implement output routing engine (telegram, github destinations)
-6. Build webapp Agents section (list, status, manual trigger, run history)
-7. Add /agents command to Telegram bot
-8. Create 2-3 initial agent definitions as templates (e.g., newsletter digest, social media poster)
+1. Implement AgentAdapter interface and LLMAdapter (refactor existing session management to use it)
+2. Implement ServiceAdapter (HTTP trigger, status polling, webhook support, health checks)
+3. Implement scheduler module in NanoClaw (cron evaluation loop, event listener)
+4. Implement agent definition parser (reads agents/<name>/agent.md files, including adapter config)
+5. Add agent_definitions and agent_runs tables to SQLite
+6. Implement fswatch on agents/ directory for hot-reload of agent definitions
+7. Implement output routing engine (telegram, github destinations)
+8. Build webapp Agents section (list, status, manual trigger, run history, health status for service agents)
+9. Add /agents command to Telegram bot
+10. Create 2-3 initial agent definitions as templates (e.g., newsletter digest, calendar agent integration)
 
 Validates: Scheduled agents run at correct times. Event triggers fire correctly. Output routes to
-configured destinations. Agents can be enabled/disabled from webapp.
+configured destinations. Agents can be enabled/disabled from webapp. At least one external service
+agent connects and responds correctly via ServiceAdapter.
 
 Exit criteria: 1+ cron-scheduled agent running reliably for 1 week. 1+ event-triggered agent fires
-correctly. Output routing delivers to all configured destinations.
+correctly. 1+ external service agent (e.g., calendar) triggered and responding via ServiceAdapter.
+Output routing delivers to all configured destinations.
 
 ---
 Phase 9: Notion Integration (DEFERRED)
@@ -1452,8 +1643,11 @@ graph TB
         GH["GitHub API<br/>repo creation"]
     end
 
+    subgraph BrowserAuto2["Browser Automation"]
+        BU["BrowserUse CLI 2<br/>direct CDP, dual-mode"]
+    end
+
     subgraph Research["Research Infrastructure"]
-        BU["BrowserUse"]
         Ded["Dedalus Labs MCP"]
     end
 
