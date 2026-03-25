@@ -1,0 +1,33 @@
+services:
+  nanoclaw:
+    build: .
+    container_name: nanoclaw
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    volumes:
+      - ./:/repo:rw
+      - nanoclaw-data:/data:rw
+    secrets:
+      - anthropic_api_key
+      - openai_api_key
+      - telegram_bot_token
+      - gemini_api_key
+    ports:
+      - "9999:9999"
+
+secrets:
+  anthropic_api_key:
+    file: ~/.nanoclaw/secrets/anthropic_api_key
+  openai_api_key:
+    file: ~/.nanoclaw/secrets/openai_api_key
+  telegram_bot_token:
+    file: ~/.nanoclaw/secrets/telegram_bot_token
+  gemini_api_key:
+    file: ~/.nanoclaw/secrets/gemini_api_key
+
+volumes:
+  nanoclaw-data:

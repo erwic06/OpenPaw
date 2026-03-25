@@ -2,20 +2,23 @@
 
 **Project:** OpenPaw
 **Current Phase:** Phase 2 -- NanoClaw Core
-**Last Updated:** 2026-03-06
+**Last Updated:** 2026-03-25
 
 ---
 
 ### 2.1 -- NanoClaw Docker Container Setup
-- **Status:** ready
+- **Status:** complete
 - **Type:** infrastructure
 - **Contract:** contracts/2.1-nanoclaw-docker.md
 - **Dependencies:** none
 - **Assigned:** interactive
-- **Artifacts:** `Dockerfile`, `docker-compose.yml`, `.dockerignore`
+- **Artifacts:** `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `src/index.ts`, `src/secrets.ts`, `package.json`, `tsconfig.json`, `bun.lock`
 - **Acceptance:** NanoClaw container builds and runs, mounts git repo and secrets volume
 
 #### Notes
+- Bun base image UID 1000 was taken; used UID 10001 for nanoclaw user
+- Bun image pinned by manifest list digest (sha256:0733e50...) for multi-arch support
+- Zero runtime dependencies; @types/bun 1.3.11 and typescript 6.0.2 as dev deps only
 #### Failure History
 
 ---
@@ -55,7 +58,7 @@
 - **Dependencies:** 2.1
 - **Assigned:** interactive
 - **Artifacts:** `src/db/schema.sql`, `src/db/index.ts`
-- **Acceptance:** Database initializes with schema from design doc Section 1, CRUD operations work
+- **Acceptance:** Database initializes with schema from design doc Sections 1 and 3 (4 tables), CRUD operations work
 
 #### Notes
 #### Failure History
@@ -69,7 +72,7 @@
 - **Dependencies:** 2.2, 2.4
 - **Assigned:** interactive
 - **Artifacts:** `src/gates/index.ts`, `src/gates/types.ts`
-- **Acceptance:** Gates can be created, sent via Telegram, resolved via reply; decisions logged to SQLite
+- **Acceptance:** All 6 gate types supported; gates can be created, sent via Telegram, resolved via reply; decisions logged to SQLite
 
 #### Notes
 #### Failure History
@@ -94,3 +97,4 @@
 
 | Session | Date | Task | Status | Duration | Notes |
 |---------|------|------|--------|----------|-------|
+| 1       | 2026-03-25 | 2.1  | complete | —      | Docker infra created: multi-stage Dockerfile, docker-compose.yml with secrets/volumes/security hardening, health check endpoint, secrets loader. All acceptance criteria verified. |
