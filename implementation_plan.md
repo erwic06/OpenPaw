@@ -41,15 +41,17 @@
 ---
 
 ### 2.3 -- Plan Reader
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/2.3-plan-reader.md
 - **Dependencies:** 2.1
 - **Assigned:** interactive
-- **Artifacts:** `src/plan/reader.ts`, `src/plan/parser.ts`
+- **Artifacts:** `src/plan/types.ts`, `src/plan/parser.ts`, `src/plan/reader.ts`
 - **Acceptance:** Parses implementation_plan.md, detects ready tasks, watches for changes
 
 #### Notes
+- Zero dependencies added; uses Bun built-in fs.watch with polling fallback
+- Debounces rapid file changes (500ms) for editor compatibility
 #### Failure History
 
 ---
@@ -102,3 +104,4 @@
 |---------|------|------|--------|----------|-------|
 | 1       | 2026-03-25 | 2.1  | complete | —      | Docker infra created: multi-stage Dockerfile, docker-compose.yml with secrets/volumes/security hardening, health check endpoint, secrets loader. All acceptance criteria verified. |
 | 2       | 2026-03-25 | 2.2  | complete | —      | Telegram bot module: grammy 1.41.1, sendMessage/onMessage/formatAlert, auth filtering, HTML alert formatting. Docker build verified. |
+| 3       | 2026-03-25 | 2.3  | complete | —      | Plan reader: parsePlan, getReadyTasks, watchPlan with fs.watch + polling fallback. 12 tests passing. No new dependencies. |
