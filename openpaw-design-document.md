@@ -204,6 +204,10 @@ Mission Control: Technical Design Document
   File-based, zero external dependencies, survives process restart, trivial to back up (cp the file). At these
   volumes (<100 sessions/month), SQLite is not even close to being a bottleneck.
 
+  Additional tables are defined in later sections as features are introduced:
+  - `pending_communications` (Section 3, Gate 6) — queued outbound content awaiting human approval
+  - `agent_definitions`, `agent_runs` (Section 9) — scheduled agent configuration and run history
+
   DEFERRED: Multi-project support. Current design assumes one active project per repo. Supporting multiple
   concurrent projects requires either separate repos (simple) or a project_id dimension in the plan schema.
   Defer until the need is demonstrated.
@@ -246,7 +250,7 @@ Mission Control: Technical Design Document
   ## Adapter
   type: service                          # "llm" (default) or "service"
   base_url: http://localhost:8100
-  auth: bearer ${CALENDAR_AGENT_TOKEN}   # references secrets.env
+  auth: bearer ${CALENDAR_AGENT_TOKEN}   # references ~/.nanoclaw/secrets/
   health_check: /health
   trigger_endpoint: POST /tasks
   status_endpoint: GET /tasks/{session_id}
@@ -340,12 +344,75 @@ Mission Control: Technical Design Document
 
   Secret Management
 
-  - API keys stored in ~/.nanoclaw/secrets.env, mounted read-only into NanoClaw's container.
-  - NanoClaw injects only the keys each agent needs into its session context. The Researcher never sees the
-  Vercel deploy token. Agents without BrowserUse access never see the BrowserUse Cloud API key.
-  - Git repo .gitignore includes secrets.env, sessions.db, and any .env files.
-  - DEFERRED: Automated key rotation. Manual rotation for now. At 4 agents and ~12 keys, manual is manageable.
+  Threat model: NanoClaw holds 12+ API keys worth thousands of dollars in monthly quota. A single
+  compromised dependency running inside the container has read access to everything NanoClaw can
+  read. The goal is to minimize the window where secrets exist as readable strings in the process
+  environment, and to limit what a compromised dependency can reach.
+
+  Storage:
+  - API keys stored in ~/.nanoclaw/secrets/, one key per file (e.g., anthropic_api_key,
+    telegram_bot_token). Plain text, chmod 600, owned by the user running Docker. Directory
+    chmod 700.
+  - Docker Compose secrets mount these files to /run/secrets/<name> inside the container. They
+    are never passed as environment variables and never appear in `docker inspect` output.
+    /run/secrets/ is tmpfs-backed — secrets exist only in memory inside the container.
+  - Git repo .gitignore includes .env and .env.* patterns. The secrets/ directory lives under
+    ~/.nanoclaw/ (outside the repo), so no additional .gitignore entries are needed for it.
+
+  docker-compose.yml secrets configuration:
+
+  secrets:
+    anthropic_api_key:
+      file: ~/.nanoclaw/secrets/anthropic_api_key
+    openai_api_key:
+      file: ~/.nanoclaw/secrets/openai_api_key
+    telegram_bot_token:
+      file: ~/.nanoclaw/secrets/telegram_bot_token
+    # ... one entry per secret
+
+  services:
+    nanoclaw:
+      secrets:
+        - anthropic_api_key
+        - openai_api_key
+        - telegram_bot_token
+        # ... list all secrets NanoClaw needs
+
+  Runtime loading:
+  - NanoClaw reads secrets from /run/secrets/<name> at startup using a secrets loader module.
+  - Secrets are loaded into an in-memory Map, not into process.env. No secret ever touches
+    process.env.
+  - The secrets loader reads each file with fs.readFileSync, trims whitespace, and stores the
+    value. File handles are closed immediately.
+  - Agent sessions receive only the secrets they need. NanoClaw's agent dispatch passes a
+    filtered subset of the secrets Map based on the agent's tool definitions.
+
+  Log scrubbing:
+  - NanoClaw's logger wraps all output through a scrubber that replaces any string matching a
+    loaded secret value with [REDACTED]. This applies to stdout, stderr, and any log written to
+    file or SQLite.
+  - The scrubber maintains a Set of secret values populated at startup from the secrets Map.
+  - Laminar trace arguments are already sanitized (Section 5). The scrubber is a
+    defense-in-depth layer for NanoClaw's own logs.
+
+  File permissions:
+  - Host: ~/.nanoclaw/secrets/ directory is chmod 700. Individual secret files are chmod 600.
+  - Container: NanoClaw runs as a non-root user (uid 1000). /run/secrets/ files are read-only
+    (Docker Compose default for secrets).
+  - The Dockerfile creates a nanoclaw user and switches to it before the entrypoint.
+
+  DEFERRED: Automated key rotation. Manual rotation for now. At ~12 keys, manual is manageable.
   Automate when the key count or team size justifies it.
+
+  DEFERRED: macOS Keychain integration. Docker Compose secrets with file-based storage is
+  sufficient for a single-user system. Keychain would add complexity (unlocking on boot,
+  scripting access) without meaningful security gain when the threat model is compromised
+  dependencies, not a compromised host.
+
+  DEFERRED: Secret encryption at rest. The ~/.nanoclaw/secrets/ files are plaintext. Full-disk
+  encryption (FileVault) on the Mac Mini is the appropriate layer for at-rest encryption.
+  Application-level encryption would require a key-encryption-key stored on the same machine,
+  which is circular.
 
   Blast Radius Analysis
 
@@ -390,6 +457,89 @@ Mission Control: Technical Design Document
   auto-approved for production. The realistic worst case is: bad code reaches staging, is caught during deploy
   review, and reverted. Cost: one wasted Coder session + one deploy review cycle.
 
+  Supply Chain & Dependency Security
+
+  Threat model: NanoClaw is a Node/Bun application with npm dependencies. A compromised or
+  malicious dependency can execute arbitrary code during install (postinstall scripts) or at
+  runtime (require-time side effects). Since NanoClaw holds all API keys, a single bad package
+  can exfiltrate every secret.
+
+  Attack vectors addressed:
+
+  1. Malicious postinstall script reads secrets during `bun install`:
+     Mitigation: `bun install --ignore-scripts` in Dockerfile. No lifecycle scripts run during
+     build. If a package genuinely requires a postinstall step (native compilation), it must be
+     explicitly allowlisted in a comment in the Dockerfile with justification. Docker Compose
+     secrets are mounted at runtime only — they are not available during the build stage, so
+     even if scripts ran, they could not reach /run/secrets/.
+
+  2. Compromised SDK exfiltrates other providers' keys at runtime:
+     Mitigation: Per-agent secret isolation means the Anthropic SDK only sees the Anthropic key.
+     But NanoClaw's own process loads all secrets. Defense-in-depth: build-time controls (audit,
+     lockfile, pinned versions) reduce the probability of a compromised dependency reaching
+     NanoClaw. Runtime network restriction per-dependency is not practical for a Node process.
+
+  3. Dependency update introduces malicious code after initial audit:
+     Mitigation: Lock file committed to git. Exact versions in package.json (no ^ or ~).
+     `bun install --frozen-lockfile` in Dockerfile ensures builds are reproducible and no new
+     resolution happens at build time. Dependency updates are manual-review-only.
+
+  4. Runtime exfiltration via DNS or HTTP to attacker-controlled server:
+     Mitigation: Read-only root filesystem prevents persistent malware. `no-new-privileges`
+     prevents privilege escalation. Non-root user limits what a compromised process can do.
+     Network egress filtering (iptables whitelist) is deferred — operationally complex with
+     10+ API destinations that can change IPs.
+
+  Dependency Policy:
+
+  - All versions pinned exactly in package.json. No ranges (^, ~, *, >=). Example:
+    "grammy": "1.35.2" not "grammy": "^1.35.2".
+  - bun.lock committed to git. Every build uses --frozen-lockfile.
+  - Minimize dependencies. Prefer Bun built-ins (bun:sqlite over better-sqlite3, etc.).
+  - Before adding any new dependency:
+    1. Check npm for the package. Verify: publisher, download count, last publish date,
+       GitHub repo link, open issues.
+    2. Run `bun audit` and check for known vulnerabilities in the package and its transitive
+       dependencies.
+    3. Prefer packages with zero or few transitive dependencies.
+    4. Document the dependency in the task contract's Dependencies section (why it's needed,
+       alternatives considered, transitive dep count).
+  - Periodic audit: run `bun audit` before each phase milestone. Fix or replace any package
+    with known vulnerabilities.
+
+  Build-Time Security:
+
+  - Dockerfile uses `--ignore-scripts` for bun install. Packages requiring postinstall
+    scripts must be explicitly allowlisted with justification.
+  - Base image pinned by digest, not tag. Example:
+    FROM oven/bun@sha256:<digest> instead of FROM oven/bun:latest.
+    The digest is updated manually when upgrading the base image.
+  - Multi-stage build: dependencies installed in a builder stage, only production node_modules
+    copied to the runtime stage. Build tools and dev dependencies don't exist in the final image.
+  - .dockerignore excludes: node_modules, .git, .env*, *.md, test/.
+  - Non-root user in the final image. The Dockerfile creates a `nanoclaw` user (uid 1000) and
+    runs the entrypoint as that user.
+  - No `apt-get install` in the runtime stage unless explicitly justified.
+
+  Runtime Protections:
+
+  - Docker container runs with read_only: true root filesystem (writable tmpfs for /tmp only).
+    The SQLite data directory and git repo are mounted volumes and remain writable as needed.
+    This prevents a compromised dependency from writing to the filesystem.
+  - Container has no-new-privileges: true in security_opt.
+  - Container does not run with --privileged or any added Linux capabilities.
+
+  DEFERRED: Network egress filtering (iptables/nftables whitelist of allowed outbound
+  destinations). Strongest runtime protection against exfiltration but adds significant
+  operational complexity with 10+ API services. Revisit if NanoClaw ever runs untrusted
+  agent code.
+
+  DEFERRED: npm provenance verification (SLSA/Sigstore). Bun doesn't fully support this yet.
+  Revisit when Bun's package manager adds provenance checking.
+
+  DEFERRED: Container image scanning (Trivy, Snyk). Worth adding when a CI pipeline exists.
+  For local builds, manual `bun audit` is sufficient.
+
   ---
   2b. BrowserUse CLI — General-Purpose Browser Automation
 
@@ -428,7 +578,7 @@ Mission Control: Technical Design Document
   NanoClaw wraps BrowserUse in a tool definition that agents can invoke. The wrapper:
   - Selects CLI or Cloud mode based on agent config
   - For CLI: spawns browser-use as a subprocess, captures structured output
-  - For Cloud: makes HTTP calls to BrowserUse Cloud API with the Cloud API key from secrets.env
+  - For Cloud: makes HTTP calls to BrowserUse Cloud API with the Cloud API key from ~/.nanoclaw/secrets/
   - Returns structured results (page content, screenshots, element state) to the agent
 
   This makes BrowserUse a first-class tool alongside file I/O, web search, and code execution — any

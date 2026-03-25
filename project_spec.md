@@ -33,6 +33,7 @@ OpenPaw is a personal agent fleet management system. It orchestrates coding, res
 - **Auth:** Cloudflare Access (GitHub OAuth + MFA) for web dashboard; single authorized user
 - **Code execution:** Remote via Daytona (never on the Mac Mini for headless sessions)
 - **Frontend:** Next.js on Vercel, 21st.dev components, dark theme with amber/gold accent
+- **Supply chain security:** Exact version pins, committed lock files, `--ignore-scripts` in all installs, Docker Compose secrets (not env vars), non-root container user. See design doc Section 2.
 
 ## Success Criteria
 

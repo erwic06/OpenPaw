@@ -26,6 +26,23 @@ Why this task exists. What depends on it. What it depends on.
 
 Suggested implementation strategy. Not binding -- the implementer may deviate if the acceptance criteria are still met.
 
+## Dependencies (if adding packages)
+
+Skip this section if the task does not add new packages.
+
+For each new dependency:
+
+| Package | Version | Purpose | Transitive deps | Weekly downloads | Last published |
+|---------|---------|---------|-----------------|------------------|----------------|
+| name    | x.y.z   | Why     | N               | N                | YYYY-MM-DD     |
+
+Audit checklist:
+- [ ] Publisher and repo verified on npm/registry
+- [ ] `bun audit` shows no known vulnerabilities in package or transitive deps
+- [ ] Version pinned exactly in package.json (no ^, ~, or *)
+- [ ] Alternatives considered (list briefly)
+- [ ] If >20 transitive dependencies, justification provided for why a lighter alternative isn't viable
+
 ## Files to Create/Modify
 
 - `path/to/file1` -- description

@@ -72,3 +72,13 @@ ALL of these must be true before marking a task `complete`:
 - **Never** work on a task whose dependencies are not all `complete`.
 - **Never** skip ORIENT.
 - **One task per session** unless the task is trivially small and the human approves continuing.
+
+## Dependency Management
+
+- **Pin exact versions.** No ranges. `"grammy": "1.35.2"` not `"grammy": "^1.35.2"`.
+- **Lock file committed.** `bun.lock` must be committed to git. Never .gitignore it.
+- **Audit before adding.** Before adding any new package, verify on the registry: publisher identity, download count, last publish date, repository link, transitive dependency count. Run `bun audit` after adding.
+- **--ignore-scripts.** Always use `--ignore-scripts` when installing dependencies (both locally and in Docker). If a package requires lifecycle scripts, document why in the contract.
+- **Frozen lockfile in Docker.** The Dockerfile must use `--frozen-lockfile`. If the lock file is out of date, fix it locally and commit -- never let Docker resolve dependencies.
+- **Minimize dependencies.** Prefer Bun built-in APIs over third-party packages when the functionality is simple. Every dependency is an attack surface.
+- **Document in contract.** Any task that adds a package must fill in the Dependencies section of its contract.
