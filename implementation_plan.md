@@ -92,15 +92,21 @@
 ---
 
 ### 2.6 -- launchd LaunchAgent for Auto-Start
-- **Status:** ready
+- **Status:** complete
 - **Type:** infrastructure
 - **Contract:** contracts/2.6-launchd-agent.md
 - **Dependencies:** 2.1
 - **Assigned:** interactive
-- **Artifacts:** `com.openpaw.nanoclaw.plist`
+- **Artifacts:** `com.openpaw.nanoclaw.plist`, `scripts/nanoclaw-start.sh`, `scripts/install-launchd.sh`, `scripts/uninstall-launchd.sh`
 - **Acceptance:** NanoClaw starts on boot, restarts on crash, logs to file
 
 #### Notes
+- Plist is a template with `__REPO_DIR__` and `__HOME_DIR__` placeholders; install script resolves them via sed
+- Wrapper script (`nanoclaw-start.sh`) waits up to 5 min for Docker Desktop, then exec's docker compose up
+- KeepAlive=true + ThrottleInterval=10s ensures restart within 10 seconds of process exit
+- Docker's `restart: unless-stopped` handles container-level crashes; launchd handles process/system-level restarts
+- macOS TCC: repos under ~/Documents require Full Disk Access for /bin/bash; production Mac Mini should use a non-protected path or grant FDA
+- No new dependencies added
 #### Failure History
 
 ---
@@ -114,3 +120,4 @@
 | 3       | 2026-03-25 | 2.3  | complete | —      | Plan reader: parsePlan, getReadyTasks, watchPlan with fs.watch + polling fallback. 12 tests passing. No new dependencies. |
 | 4       | 2026-03-26 | 2.4  | complete | —      | SQLite setup: bun:sqlite, 4 tables (sessions, hitl_gates, cost_log, pending_communications), WAL mode, typed CRUD. 8 tests passing. |
 | 5       | 2026-03-26 | 2.5  | complete | —      | HITL gate infrastructure: 6 gate types, requestApproval/getPendingGates, Telegram response matching, feedback accumulation, timeout support. DI for testability. 18 tests passing, 38 total. |
+| 6       | 2026-03-26 | 2.6  | complete | —      | launchd LaunchAgent: plist template with path substitution, wrapper script with Docker wait loop, install/uninstall scripts. KeepAlive + ThrottleInterval(10s). All 38 tests passing. |
