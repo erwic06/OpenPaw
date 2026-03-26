@@ -73,15 +73,20 @@
 ---
 
 ### 2.5 -- HITL Gate Infrastructure
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/2.5-hitl-gates.md
 - **Dependencies:** 2.2, 2.4
 - **Assigned:** interactive
-- **Artifacts:** `src/gates/index.ts`, `src/gates/types.ts`
+- **Artifacts:** `src/gates/index.ts`, `src/gates/types.ts`, `src/gates/formatter.ts`
 - **Acceptance:** All 6 gate types supported; gates can be created, sent via Telegram, resolved via reply; decisions logged to SQLite
 
 #### Notes
+- Dependency injection (GateDeps) for testability; no new npm packages
+- Pending gate registered before async send to avoid race between response and registration
+- Text-based response matching: single pending gate auto-targets; multiple gates require gate ID
+- Feedback accumulates in-memory per gate, returned in GateResult on resolution
+- 18 tests covering all acceptance criteria
 #### Failure History
 
 ---
@@ -108,3 +113,4 @@
 | 2       | 2026-03-25 | 2.2  | complete | —      | Telegram bot module: grammy 1.41.1, sendMessage/onMessage/formatAlert, auth filtering, HTML alert formatting. Docker build verified. |
 | 3       | 2026-03-25 | 2.3  | complete | —      | Plan reader: parsePlan, getReadyTasks, watchPlan with fs.watch + polling fallback. 12 tests passing. No new dependencies. |
 | 4       | 2026-03-26 | 2.4  | complete | —      | SQLite setup: bun:sqlite, 4 tables (sessions, hitl_gates, cost_log, pending_communications), WAL mode, typed CRUD. 8 tests passing. |
+| 5       | 2026-03-26 | 2.5  | complete | —      | HITL gate infrastructure: 6 gate types, requestApproval/getPendingGates, Telegram response matching, feedback accumulation, timeout support. DI for testability. 18 tests passing, 38 total. |
