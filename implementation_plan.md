@@ -57,15 +57,17 @@
 ---
 
 ### 2.4 -- SQLite Database Setup
-- **Status:** ready
+- **Status:** complete
 - **Type:** infrastructure
 - **Contract:** contracts/2.4-sqlite-setup.md
 - **Dependencies:** 2.1
 - **Assigned:** interactive
-- **Artifacts:** `src/db/schema.sql`, `src/db/index.ts`
+- **Artifacts:** `src/db/schema.sql`, `src/db/types.ts`, `src/db/index.ts`
 - **Acceptance:** Database initializes with schema from design doc Sections 1 and 3 (4 tables), CRUD operations work
 
 #### Notes
+- Uses bun:sqlite (zero dependencies); WAL mode enabled
+- Schema exactly matches design doc Sections 1 and 3
 #### Failure History
 
 ---
@@ -105,3 +107,4 @@
 | 1       | 2026-03-25 | 2.1  | complete | —      | Docker infra created: multi-stage Dockerfile, docker-compose.yml with secrets/volumes/security hardening, health check endpoint, secrets loader. All acceptance criteria verified. |
 | 2       | 2026-03-25 | 2.2  | complete | —      | Telegram bot module: grammy 1.41.1, sendMessage/onMessage/formatAlert, auth filtering, HTML alert formatting. Docker build verified. |
 | 3       | 2026-03-25 | 2.3  | complete | —      | Plan reader: parsePlan, getReadyTasks, watchPlan with fs.watch + polling fallback. 12 tests passing. No new dependencies. |
+| 4       | 2026-03-26 | 2.4  | complete | —      | SQLite setup: bun:sqlite, 4 tables (sessions, hitl_gates, cost_log, pending_communications), WAL mode, typed CRUD. 8 tests passing. |
