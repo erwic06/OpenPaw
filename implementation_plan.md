@@ -1,8 +1,8 @@
 # OpenPaw -- Implementation Plan
 
 **Project:** OpenPaw
-**Current Phase:** Phase 2 -- NanoClaw Core
-**Last Updated:** 2026-03-25
+**Current Phase:** Phase 3 -- Headless Coding
+**Last Updated:** 2026-03-26
 
 ---
 
@@ -111,6 +111,174 @@
 
 ---
 
+### 3.1 -- AgentAdapter Interface and Types
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/3.1-agent-adapter-types.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/types.ts`, `src/agents/index.ts`
+- **Acceptance:** AgentAdapter interface with 4 methods, ModelRoster with 3 tiers, all types exported, typecheck passes
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.2 -- Coder Agent System Prompt
+- **Status:** ready
+- **Type:** content
+- **Contract:** contracts/3.2-coder-system-prompt.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `agents/coder/system_prompt.md`
+- **Acceptance:** System prompt exists with lifecycle, tools, constraints, and output format
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.3 -- Cost Tracking Module
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/3.3-cost-tracking.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/costs/pricing.ts`, `src/costs/index.ts`
+- **Acceptance:** Cost calculation, logging, and aggregation for all 6 models; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.4 -- Daytona Sandbox Manager
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/3.4-daytona-sandbox.md
+- **Dependencies:** 3.1
+- **Assigned:** interactive
+- **Artifacts:** `src/sandbox/types.ts`, `src/sandbox/index.ts`
+- **Acceptance:** Sandbox create/get/destroy lifecycle, package audit, tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.5 -- Agent SDK Integration + LLMAdapter
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/3.5-agent-sdk-llm-adapter.md
+- **Dependencies:** 3.1, 3.3
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/llm-adapter.ts`
+- **Acceptance:** LLMAdapter implements AgentAdapter, spawns Claude Code sessions, tracks usage; Docker build succeeds
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.6 -- Daytona MCP Tools for Coder
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/3.6-daytona-mcp-tools.md
+- **Dependencies:** 3.4, 3.5
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/tools/daytona-tools.ts`, `src/agents/tools/index.ts`
+- **Acceptance:** File, shell, and git tools proxy through Daytona sandbox; path scoping enforced; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.7 -- Fallback Routing
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/3.7-fallback-routing.md
+- **Dependencies:** 3.5
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/fallback.ts`, `src/agents/openai-adapter.ts`
+- **Acceptance:** Retry with backoff, fallback to OpenAI per roster, Telegram alert on fallback; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.8 -- Session Monitoring
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/3.8-session-monitoring.md
+- **Dependencies:** 3.5
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/monitor.ts`
+- **Acceptance:** Detects hung sessions (10min), kills and marks FAILED, sends alert; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.9 -- Session Runner + Orchestrator Wiring
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/3.9-session-runner.md
+- **Dependencies:** 3.2, 3.6, 3.7, 3.8
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/runner.ts`, `src/plan/writer.ts`
+- **Acceptance:** Full task lifecycle orchestration, plan writer, index.ts wiring; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.10 -- Cubic Integration
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/3.10-cubic-integration.md
+- **Dependencies:** 3.6
+- **Assigned:** interactive
+- **Artifacts:** `src/integrations/cubic.ts`
+- **Acceptance:** Polls GitHub for Cubic review, captures summary; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.11 -- Deploy Gate Wiring
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/3.11-deploy-gate.md
+- **Dependencies:** 3.9
+- **Assigned:** interactive
+- **Artifacts:** (modifies existing files)
+- **Acceptance:** Deploy-tagged tasks trigger Gate 2 with context; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 3.12 -- Restart Recovery
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/3.12-restart-recovery.md
+- **Dependencies:** 3.9
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/recovery.ts`
+- **Acceptance:** Detects orphaned sessions on startup, marks FAILED, resets tasks, alerts; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
 ## Session Log
 
 | Session | Date | Task | Status | Duration | Notes |
@@ -121,3 +289,4 @@
 | 4       | 2026-03-26 | 2.4  | complete | —      | SQLite setup: bun:sqlite, 4 tables (sessions, hitl_gates, cost_log, pending_communications), WAL mode, typed CRUD. 8 tests passing. |
 | 5       | 2026-03-26 | 2.5  | complete | —      | HITL gate infrastructure: 6 gate types, requestApproval/getPendingGates, Telegram response matching, feedback accumulation, timeout support. DI for testability. 18 tests passing, 38 total. |
 | 6       | 2026-03-26 | 2.6  | complete | —      | launchd LaunchAgent: plist template with path substitution, wrapper script with Docker wait loop, install/uninstall scripts. KeepAlive + ThrottleInterval(10s). All 38 tests passing. |
+| 7       | 2026-03-26 | —    | complete | —      | Phase 3 scaffolding: wrote 12 contracts (3.1-3.12), added Phase 3 task entries to implementation plan, updated current phase to Phase 3. |
