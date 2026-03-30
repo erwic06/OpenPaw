@@ -146,7 +146,7 @@
 ---
 
 ### 3.3 -- Cost Tracking Module
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.3-cost-tracking.md
 - **Dependencies:** none
@@ -155,6 +155,8 @@
 - **Acceptance:** Cost calculation, logging, and aggregation for all 6 models; tests pass
 
 #### Notes
+- Pricing from Anthropic and OpenAI pricing pages (2026-03-29); gpt-5.4-high and gpt-5.4-medium share same per-token rate (same model, different reasoning.effort)
+- DI via CostTrackerDeps; zero runtime dependencies; 13 new tests
 #### Failure History
 
 ---
@@ -298,3 +300,4 @@
 | 7       | 2026-03-26 | —    | complete | —      | Phase 3 scaffolding: wrote 12 contracts (3.1-3.12), added Phase 3 task entries to implementation plan, updated current phase to Phase 3. |
 | 8       | 2026-03-29 | 3.1  | complete | —      | AgentAdapter interface and types: 4-method interface, AgentInput/Output, 3-tier ModelRoster with DEFAULT_ROSTER, barrel export. Fixed fragile test. 38 tests passing. |
 | 9       | 2026-03-29 | 3.2  | complete | —      | Coder agent system prompt: headless lifecycle, filesystem access table, hard stops, completion gates, structured result format. Content-only task. |
+| 10      | 2026-03-29 | 3.3  | complete | —      | Cost tracking module: PRICING map for 6 models, logUsage/getSessionCost/getDailySpend with DI. 13 new tests, 51 total passing. |
