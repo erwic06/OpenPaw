@@ -162,7 +162,7 @@
 ---
 
 ### 3.4 -- Daytona Sandbox Manager
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.4-daytona-sandbox.md
 - **Dependencies:** 3.1
@@ -171,6 +171,11 @@
 - **Acceptance:** Sandbox create/get/destroy lifecycle, package audit, tests pass
 
 #### Notes
+- @daytonaio/sdk 0.158.0: 23 direct deps, 243 installed packages, 0 audit vulnerabilities
+- protobufjs postinstall blocked (opentelemetry transitive dep); no runtime impact
+- SandboxHandle exposes raw Sandbox instance with fs/git/process for MCP tools (task 3.6)
+- Daytona client lazily cached and reused across sandbox operations
+- 12 new tests with mocked SDK, 63 total passing
 #### Failure History
 
 ---
@@ -301,3 +306,4 @@
 | 8       | 2026-03-29 | 3.1  | complete | —      | AgentAdapter interface and types: 4-method interface, AgentInput/Output, 3-tier ModelRoster with DEFAULT_ROSTER, barrel export. Fixed fragile test. 38 tests passing. |
 | 9       | 2026-03-29 | 3.2  | complete | —      | Coder agent system prompt: headless lifecycle, filesystem access table, hard stops, completion gates, structured result format. Content-only task. |
 | 10      | 2026-03-29 | 3.3  | complete | —      | Cost tracking module: PRICING map for 6 models, logUsage/getSessionCost/getDailySpend with DI. 13 new tests, 51 total passing. |
+| 11      | 2026-03-29 | 3.4  | complete | —      | Daytona sandbox manager: @daytonaio/sdk 0.158.0, create/get/destroy lifecycle with in-memory Map, DI via SandboxDeps. 12 new tests, 63 total passing. |

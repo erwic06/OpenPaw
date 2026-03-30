@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@daytonaio/sdk": "0.158.0",
     "grammy": "1.41.1"
   },
   "devDependencies": {
