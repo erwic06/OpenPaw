@@ -202,7 +202,7 @@
 ---
 
 ### 3.6 -- Daytona MCP Tools for Coder
-- **Status:** in-progress
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.6-daytona-mcp-tools.md
 - **Dependencies:** 3.4, 3.5
@@ -211,6 +211,12 @@
 - **Acceptance:** File, shell, and git tools proxy through Daytona sandbox; path scoping enforced; tests pass
 
 #### Notes
+- 11 MCP tools: file_read, file_write, file_list, shell_exec, git_status, git_add, git_commit, git_push, git_diff, git_create_branch, git_checkout
+- Path validation: all file ops scoped to /workspace/ prefix; directory traversal rejected
+- git_diff uses process.executeCommand since Daytona Git API has no native diff method
+- Sandbox property is `fs` (not `filesystem`) per Daytona SDK types
+- No new packages; uses Agent SDK tool()/createSdkMcpServer() and zod from Task 3.5
+- 21 new tests, 104 total passing
 #### Failure History
 
 ---
@@ -258,7 +264,7 @@
 ---
 
 ### 3.10 -- Cubic Integration
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/3.10-cubic-integration.md
 - **Dependencies:** 3.6
@@ -314,3 +320,5 @@
 | 9       | 2026-03-29 | 3.2  | complete | —      | Coder agent system prompt: headless lifecycle, filesystem access table, hard stops, completion gates, structured result format. Content-only task. |
 | 10      | 2026-03-29 | 3.3  | complete | —      | Cost tracking module: PRICING map for 6 models, logUsage/getSessionCost/getDailySpend with DI. 13 new tests, 51 total passing. |
 | 11      | 2026-03-29 | 3.4  | complete | —      | Daytona sandbox manager: @daytonaio/sdk 0.158.0, create/get/destroy lifecycle with in-memory Map, DI via SandboxDeps. 12 new tests, 63 total passing. |
+| 12      | 2026-03-29 | 3.5  | complete | —      | LLMAdapter wraps Agent SDK query(): session lifecycle, cost tracking, AbortController cancel. 3 packages added (agent-sdk 0.2.87, claude-code 2.1.87, zod 4.3.6). Dockerfile updated for CLI PATH. 20 new tests, 83 total. |
+| 13      | 2026-03-29 | 3.6  | complete | —      | Daytona MCP tools: 11 tools (3 file, 1 shell, 7 git) via Agent SDK tool()/createSdkMcpServer(). Path scoping to /workspace/. No new packages. 21 new tests, 104 total. |
