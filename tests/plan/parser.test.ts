@@ -113,17 +113,22 @@ describe("getReadyTasks", () => {
   it("returns only ready tasks with all deps complete", () => {
     const tasks = parsePlan(realContent);
     const ready = getReadyTasks(tasks);
+    expect(ready.length).toBeGreaterThan(0);
     for (const t of ready) {
       expect(t.status).toBe("ready");
+      // every dependency must be complete
+      for (const dep of t.dependencies) {
+        const depTask = tasks.find((x) => x.id === dep);
+        if (depTask) expect(depTask.status).toBe("complete");
+      }
     }
-    // Phase 3 Tier 0 tasks (3.1, 3.2, 3.3) have no deps and are ready
-    expect(ready.find((t) => t.id === "3.1")).toBeDefined();
-    expect(ready.find((t) => t.id === "3.2")).toBeDefined();
-    expect(ready.find((t) => t.id === "3.3")).toBeDefined();
-    // 3.4 depends on 3.1 which is ready (not complete), so 3.4 should not be in ready
-    expect(ready.find((t) => t.id === "3.4")).toBeUndefined();
     // blocked tasks should not appear
-    expect(ready.find((t) => t.id === "3.6")).toBeUndefined();
+    for (const t of ready) {
+      const blockedIds = tasks
+        .filter((x) => x.status === "blocked")
+        .map((x) => x.id);
+      expect(blockedIds).not.toContain(t.id);
+    }
   });
 
   it("excludes completed tasks", () => {

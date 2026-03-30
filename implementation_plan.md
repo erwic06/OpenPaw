@@ -112,7 +112,7 @@
 ---
 
 ### 3.1 -- AgentAdapter Interface and Types
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.1-agent-adapter-types.md
 - **Dependencies:** none
@@ -121,6 +121,9 @@
 - **Acceptance:** AgentAdapter interface with 4 methods, ModelRoster with 3 tiers, all types exported, typecheck passes
 
 #### Notes
+- Pure types module: AgentAdapter interface (4 methods), AgentInput/AgentOutput, ModelTier/ModelConfig/ModelRoster, DEFAULT_ROSTER constant
+- Zero runtime dependencies; all types match design doc Section 1
+- Fixed pre-existing test fragility in parser.test.ts (hardcoded task IDs → invariant-based assertions)
 #### Failure History
 
 ---
@@ -290,3 +293,4 @@
 | 5       | 2026-03-26 | 2.5  | complete | —      | HITL gate infrastructure: 6 gate types, requestApproval/getPendingGates, Telegram response matching, feedback accumulation, timeout support. DI for testability. 18 tests passing, 38 total. |
 | 6       | 2026-03-26 | 2.6  | complete | —      | launchd LaunchAgent: plist template with path substitution, wrapper script with Docker wait loop, install/uninstall scripts. KeepAlive + ThrottleInterval(10s). All 38 tests passing. |
 | 7       | 2026-03-26 | —    | complete | —      | Phase 3 scaffolding: wrote 12 contracts (3.1-3.12), added Phase 3 task entries to implementation plan, updated current phase to Phase 3. |
+| 8       | 2026-03-29 | 3.1  | complete | —      | AgentAdapter interface and types: 4-method interface, AgentInput/Output, 3-tier ModelRoster with DEFAULT_ROSTER, barrel export. Fixed fragile test. 38 tests passing. |
