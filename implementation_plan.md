@@ -2,7 +2,7 @@
 
 **Project:** OpenPaw
 **Current Phase:** Phase 3 -- Headless Coding
-**Last Updated:** 2026-03-26
+**Last Updated:** 2026-03-29
 
 ---
 
@@ -222,7 +222,7 @@
 ---
 
 ### 3.7 -- Fallback Routing
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.7-fallback-routing.md
 - **Dependencies:** 3.5
@@ -231,12 +231,18 @@
 - **Acceptance:** Retry with backoff, fallback to OpenAI per roster, Telegram alert on fallback; tests pass
 
 #### Notes
+- openai 6.33.0 (0 direct deps, 0 audit vulnerabilities); published by OpenAI maintainers
+- docker-compose.yml already had openai_api_key secret from initial setup
+- FallbackRouter: standalone `executeWithFallback()` function with DI sleep for testing; non-retryable errors propagate immediately
+- OpenAIAdapter: full tool-call loop via DI chatCreate; mirrors LLMAdapter pattern (trigger/status/output/cancel/getLastActivityMs)
+- isRetryableError detects: rate limit, 429, quota, overloaded, 503, 529, connection, timeout, ECONNRESET, ECONNREFUSED
+- 25 new tests, 129 total passing
 #### Failure History
 
 ---
 
 ### 3.8 -- Session Monitoring
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.8-session-monitoring.md
 - **Dependencies:** 3.5
@@ -245,12 +251,17 @@
 - **Acceptance:** Detects hung sessions (10min), kills and marks FAILED, sends alert; tests pass
 
 #### Notes
+- SessionMonitor class with DI (cancelSession, db, sendAlert, now); no new packages
+- check() exposed publicly for testable fake-timer approach (setInterval calls it internally)
+- Hung session removed from tracking Map before async cleanup to prevent double-handling
+- cancelSession errors handled gracefully (session may already be finished)
+- 17 new tests, 146 total passing
 #### Failure History
 
 ---
 
 ### 3.9 -- Session Runner + Orchestrator Wiring
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/3.9-session-runner.md
 - **Dependencies:** 3.2, 3.6, 3.7, 3.8
@@ -322,3 +333,5 @@
 | 11      | 2026-03-29 | 3.4  | complete | —      | Daytona sandbox manager: @daytonaio/sdk 0.158.0, create/get/destroy lifecycle with in-memory Map, DI via SandboxDeps. 12 new tests, 63 total passing. |
 | 12      | 2026-03-29 | 3.5  | complete | —      | LLMAdapter wraps Agent SDK query(): session lifecycle, cost tracking, AbortController cancel. 3 packages added (agent-sdk 0.2.87, claude-code 2.1.87, zod 4.3.6). Dockerfile updated for CLI PATH. 20 new tests, 83 total. |
 | 13      | 2026-03-29 | 3.6  | complete | —      | Daytona MCP tools: 11 tools (3 file, 1 shell, 7 git) via Agent SDK tool()/createSdkMcpServer(). Path scoping to /workspace/. No new packages. 21 new tests, 104 total. |
+| 14      | 2026-03-29 | 3.7  | complete | —      | Fallback routing: executeWithFallback() with exponential backoff (30s/60s/120s), isRetryableError detection. OpenAIAdapter with tool-call loop via DI chatCreate. openai 6.33.0 (0 deps). 25 new tests, 129 total. |
+| 15      | 2026-03-29 | 3.8  | complete | —      | Session monitoring: SessionMonitor class tracks active sessions, detects 10min inactivity, cancels hung sessions, updates SQLite to FAILED, sends Telegram alert. DI with fake time for testing. No new packages. 17 new tests, 146 total. |
