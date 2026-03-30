@@ -181,7 +181,7 @@
 ---
 
 ### 3.5 -- Agent SDK Integration + LLMAdapter
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.5-agent-sdk-llm-adapter.md
 - **Dependencies:** 3.1, 3.3
@@ -190,12 +190,19 @@
 - **Acceptance:** LLMAdapter implements AgentAdapter, spawns Claude Code sessions, tracks usage; Docker build succeeds
 
 #### Notes
+- @anthropic-ai/claude-agent-sdk 0.2.87 (2 direct deps: @anthropic-ai/sdk, @modelcontextprotocol/sdk), @anthropic-ai/claude-code 2.1.87 (0 deps), zod 4.3.6 (0 deps); 0 audit vulnerabilities
+- DI via LLMAdapterDeps: queryFn override for testing, mcpServers for Task 3.6 integration
+- Background session execution: trigger() returns immediately, runSession() iterates query() async generator
+- getLastActivityMs() exposed for session monitoring (Task 3.8)
+- Result usage is treated as cumulative (overwrites, not adds)
+- Dockerfile adds node_modules/.bin to PATH for Claude CLI access
+- 20 new tests, 83 total passing
 #### Failure History
 
 ---
 
 ### 3.6 -- Daytona MCP Tools for Coder
-- **Status:** blocked
+- **Status:** in-progress
 - **Type:** code
 - **Contract:** contracts/3.6-daytona-mcp-tools.md
 - **Dependencies:** 3.4, 3.5
@@ -209,7 +216,7 @@
 ---
 
 ### 3.7 -- Fallback Routing
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/3.7-fallback-routing.md
 - **Dependencies:** 3.5
@@ -223,7 +230,7 @@
 ---
 
 ### 3.8 -- Session Monitoring
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/3.8-session-monitoring.md
 - **Dependencies:** 3.5

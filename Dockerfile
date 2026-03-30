@@ -15,6 +15,10 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY src/ ./src/
 COPY package.json ./
 
+# Claude Code CLI (from @anthropic-ai/claude-code) must be in PATH
+# for the Agent SDK to spawn headless sessions.
+ENV PATH="/app/node_modules/.bin:${PATH}"
+
 USER nanoclaw
 
 HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
