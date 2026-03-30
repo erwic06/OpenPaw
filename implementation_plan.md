@@ -129,7 +129,7 @@
 ---
 
 ### 3.2 -- Coder Agent System Prompt
-- **Status:** ready
+- **Status:** complete
 - **Type:** content
 - **Contract:** contracts/3.2-coder-system-prompt.md
 - **Dependencies:** none
@@ -138,6 +138,9 @@
 - **Acceptance:** System prompt exists with lifecycle, tools, constraints, and output format
 
 #### Notes
+- 5-phase headless lifecycle (Orient/Execute/Verify/Update/Terminate) — Select phase collapsed since NanoClaw pre-assigns tasks
+- Filesystem access table mirrors design doc Section 1 matrix; hard stop conditions match CLAUDE.md
+- Structured result report template for machine-parseable session output
 #### Failure History
 
 ---
@@ -294,3 +297,4 @@
 | 6       | 2026-03-26 | 2.6  | complete | —      | launchd LaunchAgent: plist template with path substitution, wrapper script with Docker wait loop, install/uninstall scripts. KeepAlive + ThrottleInterval(10s). All 38 tests passing. |
 | 7       | 2026-03-26 | —    | complete | —      | Phase 3 scaffolding: wrote 12 contracts (3.1-3.12), added Phase 3 task entries to implementation plan, updated current phase to Phase 3. |
 | 8       | 2026-03-29 | 3.1  | complete | —      | AgentAdapter interface and types: 4-method interface, AgentInput/Output, 3-tier ModelRoster with DEFAULT_ROSTER, barrel export. Fixed fragile test. 38 tests passing. |
+| 9       | 2026-03-29 | 3.2  | complete | —      | Coder agent system prompt: headless lifecycle, filesystem access table, hard stops, completion gates, structured result format. Content-only task. |
