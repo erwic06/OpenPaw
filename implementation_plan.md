@@ -1,8 +1,8 @@
 # OpenPaw -- Implementation Plan
 
 **Project:** OpenPaw
-**Current Phase:** Phase 3 -- Headless Coding
-**Last Updated:** 2026-03-30
+**Current Phase:** Phase 4 -- Research Pipeline
+**Last Updated:** 2026-03-31
 
 ---
 
@@ -336,6 +336,118 @@
 
 ---
 
+### 4.1 -- Expand Model Roster and Provider Types
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/4.1-model-roster-expansion.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/types.ts`, `src/costs/pricing.ts`
+- **Acceptance:** "research" ModelTier, "google" Provider, Gemini pricing in PRICING table; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 4.2 -- Gemini Adapter
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/4.2-gemini-adapter.md
+- **Dependencies:** 4.1
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/gemini-adapter.ts`
+- **Acceptance:** GeminiAdapter implements AgentAdapter, spawns Gemini sessions, tracks usage; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 4.3 -- BrowserUse Tool Wrapper
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/4.3-browseruse-wrapper.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/tools/browseruse.ts`, `src/tools/index.ts`
+- **Acceptance:** Cloud-mode BrowserUse wrapper, structured results, Gemini tool declaration export; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 4.4 -- Researcher Agent System Prompt
+- **Status:** ready
+- **Type:** content
+- **Contract:** contracts/4.4-researcher-system-prompt.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `agents/researcher/system_prompt.md`
+- **Acceptance:** System prompt with anti-sycophancy focus, research methodology, citation requirements, depth awareness
+
+#### Notes
+#### Failure History
+
+---
+
+### 4.5 -- Research Types and Contract Template
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/4.5-research-types.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/research/types.ts`, `src/research/index.ts`, `contracts/_research_template.md`
+- **Acceptance:** ResearchBrief/Section/Source types, DepthConfig map, research contract template; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 4.6 -- Research Fact-Check Reviewer
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/4.6-research-reviewer.md
+- **Dependencies:** 4.5
+- **Assigned:** interactive
+- **Artifacts:** `agents/researcher-reviewer/system_prompt.md`, `src/review/research.ts`
+- **Acceptance:** Adversarial fact-checking prompt, runResearchReview function, reuses ReviewResult types; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 4.7 -- Research Session Runner
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/4.7-research-runner.md
+- **Dependencies:** 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
+- **Assigned:** interactive
+- **Artifacts:** `src/research/runner.ts`, `src/research/estimator.ts`
+- **Acceptance:** Full research orchestration: cost estimate, Researcher session, Reviewer fact-check, Gate 3 approval; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 4.8 -- Docker and Secrets Configuration
+- **Status:** blocked
+- **Type:** infrastructure
+- **Contract:** contracts/4.8-docker-secrets.md
+- **Dependencies:** 4.7
+- **Assigned:** interactive
+- **Artifacts:** `docker-compose.yml`, `src/index.ts`
+- **Acceptance:** Gemini and BrowserUse secrets wired, ResearchRunner instantiated at startup; Docker build succeeds
+
+#### Notes
+#### Failure History
+
+---
+
 ## Session Log
 
 | Session | Date | Task | Status | Duration | Notes |
@@ -360,3 +472,4 @@
 | 18      | 2026-03-31 | 3.10 | complete | —  | Code review module: ReviewResult/ReviewFinding types, runCodeReview with ReviewExecutor DI, parseReviewResult (bare/fenced JSON), adversarial reviewer system prompt, runner integration (REQUEST_CHANGES → failed, crash → soft pass). No new packages. 25 new tests, 182 total. |
 | 19      | 2026-03-31 | 3.11 | complete | —  | Deploy gate wiring: parser extended with deploy tag, runner calls requestApproval for deploy-tagged tasks, assembleDeployContext with diff/review/session summary. Approved → complete, denied/timeout → blocked. No new packages. 18 new tests, 200 total. |
 | 20      | 2026-03-31 | 3.12 | complete | —  | Restart recovery: getOrphanedSessions DB query, recoverOrphanedSessions resets tasks to ready and marks sessions FAILED. Wired in index.ts before plan watcher. Fixed fragile parser test. No new packages. 14 new tests, 214 total. |
+| 21      | 2026-03-31 | —    | complete | —  | Phase 4 scaffolding: wrote 8 contracts (4.1-4.8), added Phase 4 task entries to implementation plan, updated current phase. Fixed stale OpenAIAdapter refs in 3.7 contract. Updated project_spec.md (Daytona/Cubic → local workspaces/Claude Reviewer). 214 tests passing. |
