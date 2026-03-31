@@ -50,6 +50,12 @@ export function getSessionsByStatus(db: Database, status: string): Session[] {
   return db.prepare("SELECT * FROM sessions WHERE terminal_state = ?").all(status) as Session[];
 }
 
+export function getOrphanedSessions(db: Database): Session[] {
+  return db
+    .prepare("SELECT * FROM sessions WHERE ended_at IS NULL")
+    .all() as Session[];
+}
+
 // --- HITL Gates ---
 
 export function insertGate(db: Database, gate: Omit<HitlGate, "decided_at" | "decision">): void {

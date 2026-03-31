@@ -317,7 +317,7 @@
 ---
 
 ### 3.12 -- Restart Recovery
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.12-restart-recovery.md
 - **Dependencies:** 3.9
@@ -326,6 +326,12 @@
 - **Acceptance:** Detects orphaned sessions on startup, marks FAILED, resets tasks, alerts; tests pass
 
 #### Notes
+- recoverOrphanedSessions with RecoveryDeps DI; getOrphanedSessions DB query added
+- Handles sessions without task_id; continues if plan update fails for one task
+- Wired in index.ts before plan watcher — no race condition
+- Double-run safe: ended_at set on first recovery, so second run finds nothing
+- Fixed fragile parser test (ready count was plan-state-dependent)
+- 14 new tests (3 DB query + 11 recovery), 214 total passing
 #### Failure History
 
 ---
@@ -353,3 +359,4 @@
 | 17      | 2026-03-30 | 3.4/3.6/3.7 | complete | —  | Lean integration overhaul: removed Daytona SDK (243 packages) and openai package, replaced with local workspaces (git clone /repo) and CodexAdapter (@openai/codex-sdk 0.117.0). LLMAdapter uses cwd instead of mcpServers. Tier-based routing: heavy/standard → Claude Code, light → Codex, cross-provider fallback. Deleted openai-adapter.ts, daytona-tools.ts, tools/index.ts. Updated system prompt, Docker config, pricing. 156 tests passing. |
 | 18      | 2026-03-31 | 3.10 | complete | —  | Code review module: ReviewResult/ReviewFinding types, runCodeReview with ReviewExecutor DI, parseReviewResult (bare/fenced JSON), adversarial reviewer system prompt, runner integration (REQUEST_CHANGES → failed, crash → soft pass). No new packages. 25 new tests, 182 total. |
 | 19      | 2026-03-31 | 3.11 | complete | —  | Deploy gate wiring: parser extended with deploy tag, runner calls requestApproval for deploy-tagged tasks, assembleDeployContext with diff/review/session summary. Approved → complete, denied/timeout → blocked. No new packages. 18 new tests, 200 total. |
+| 20      | 2026-03-31 | 3.12 | complete | —  | Restart recovery: getOrphanedSessions DB query, recoverOrphanedSessions resets tasks to ready and marks sessions FAILED. Wired in index.ts before plan watcher. Fixed fragile parser test. No new packages. 14 new tests, 214 total. |

@@ -9,6 +9,7 @@ import { initDatabase } from "./db/index.ts";
 import { initGates } from "./gates/index.ts";
 import { watchPlan } from "./plan/reader.ts";
 import { SessionRunner } from "./agents/runner.ts";
+import { recoverOrphanedSessions } from "./agents/recovery.ts";
 
 const HEALTH_PORT = 9999;
 const REPO_DIR = "/repo";
@@ -58,6 +59,16 @@ const anthropicApiKey = secrets.get("anthropic_api_key");
 const openaiApiKey = secrets.get("openai_api_key") ?? "";
 if (!openaiApiKey) {
   console.warn("[nanoclaw] openai_api_key missing — Codex adapter will fail, Claude fallback only");
+}
+
+// --- Restart Recovery (before plan watcher) ---
+const recovered = await recoverOrphanedSessions({
+  db,
+  planPath: PLAN_PATH,
+  sendAlert,
+});
+if (recovered > 0) {
+  console.log(`[nanoclaw] recovered ${recovered} orphaned session(s)`);
 }
 
 if (anthropicApiKey) {
