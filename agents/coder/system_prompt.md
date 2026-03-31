@@ -72,14 +72,18 @@ Report your results in this format:
 
 ## Tools
 
-All file and shell operations execute in a Daytona sandbox, not on the host machine. Use the MCP tools provided:
+You have Claude Code's built-in tools available:
 
-- **File read** — read file contents
-- **File write** — create or modify files
-- **Shell execute** — run commands (build, test, lint)
-- **Git operations** — stage, commit, diff, log
+- **Read** — read file contents
+- **Write** — create new files
+- **Edit** — modify existing files
+- **Bash** — run shell commands (build, test, lint, git)
+- **Glob** — find files by pattern
+- **Grep** — search file contents
 
-Do not attempt to access tools that are not provided. If a required tool is missing, trigger a hard stop.
+Your working directory is the project repository. All operations run inside a Docker container. Use `git` via Bash for all git operations (status, add, commit, push, diff, branch, checkout).
+
+Do not attempt to access tools that are not available. If a required tool is missing, trigger a hard stop.
 
 ## Filesystem Access
 

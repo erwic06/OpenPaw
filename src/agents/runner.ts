@@ -4,7 +4,7 @@ import type { Task } from "../plan/types.ts";
 import type { AgentInput, AgentOutput } from "./types.ts";
 import { DEFAULT_ROSTER } from "./types.ts";
 import { LLMAdapter } from "./llm-adapter.ts";
-import { OpenAIAdapter } from "./openai-adapter.ts";
+import { CodexAdapter } from "./codex-adapter.ts";
 import { executeWithFallback, isRetryableError } from "./fallback.ts";
 import { SessionMonitor } from "./monitor.ts";
 import {
@@ -12,7 +12,6 @@ import {
   destroySandbox as realDestroySandbox,
 } from "../sandbox/index.ts";
 import type { SandboxDeps, SandboxConfig, SandboxHandle } from "../sandbox/types.ts";
-import { createDaytonaToolServer } from "./tools/index.ts";
 import { updateTaskStatus } from "../plan/writer.ts";
 
 export interface RunnerDeps {
@@ -20,7 +19,7 @@ export interface RunnerDeps {
   sendAlert: (message: string) => Promise<void>;
   anthropicApiKey: string;
   openaiApiKey: string;
-  repoUrl: string;
+  repoMount: string;
   branch: string;
   planPath: string;
   systemPromptPath: string;
@@ -107,11 +106,11 @@ export class SessionRunner {
       // 1. Update plan to in-progress
       await updateTaskStatus(this.deps.planPath, task.id, "in-progress");
 
-      // 2. Create sandbox
+      // 2. Create local workspace
       const createFn = this.deps.createSandboxFn ?? realCreateSandbox;
       sandboxHandle = await createFn(this.deps.sandboxDeps, {
         sessionId: sandboxId,
-        repoUrl: this.deps.repoUrl,
+        repoMount: this.deps.repoMount,
         branch: this.deps.branch,
       });
 
@@ -171,12 +170,11 @@ export class SessionRunner {
     }
   }
 
-  /** Full session execution: adapter creation, monitoring, fallback routing. */
+  /** Full session execution: adapter creation, monitoring, tier-based routing. */
   private async executeSession(
     task: Task,
     sandbox: SandboxHandle,
   ): Promise<AgentOutput> {
-    const toolServer = createDaytonaToolServer(sandbox.sandbox);
     const repoDir = dirname(this.deps.planPath);
 
     const input: AgentInput = {
@@ -191,19 +189,29 @@ export class SessionRunner {
 
     const roster = DEFAULT_ROSTER[input.modelTier];
 
-    const primaryAdapter = new LLMAdapter({
+    // Both adapters get cwd pointed at the workspace
+    const claudeAdapter = new LLMAdapter({
       db: this.deps.db,
       anthropicApiKey: this.deps.anthropicApiKey,
-      mcpServers: { "daytona-tools": toolServer },
+      cwd: sandbox.workDir,
     });
 
-    const fallbackAdapter = new OpenAIAdapter({
+    const codexAdapter = new CodexAdapter({
       db: this.deps.db,
       openaiApiKey: this.deps.openaiApiKey,
+      cwd: sandbox.workDir,
     });
 
+    // Route by model tier: heavy/standard → Claude primary, light → Codex primary
+    const primaryAdapter = roster.primary.provider === "anthropic"
+      ? claudeAdapter
+      : codexAdapter;
+    const fallbackAdapter = roster.fallback.provider === "anthropic"
+      ? claudeAdapter
+      : codexAdapter;
+
     const makeExecutor =
-      (adapter: LLMAdapter | OpenAIAdapter) =>
+      (adapter: LLMAdapter | CodexAdapter) =>
       async (): Promise<AgentOutput> => {
         const sessionId = await adapter.trigger(input);
         this.activeSessions.set(sessionId, {

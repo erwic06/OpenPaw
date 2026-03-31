@@ -226,13 +226,12 @@ describe("LLMAdapter.trigger", () => {
     expect(params.options.systemPrompt).toBeUndefined();
   });
 
-  it("passes mcpServers from deps", async () => {
-    const mcpServers = { "daytona-tools": {} as any };
+  it("passes cwd from deps", async () => {
     const qfn = mockQueryFn([resultSuccess("done", 100, 50)]);
-    const adapter = new LLMAdapter({ ...deps, queryFn: qfn, mcpServers });
+    const adapter = new LLMAdapter({ ...deps, queryFn: qfn, cwd: "/workspaces/test-session" });
     await adapter.trigger(makeInput());
     const params = qfn.mock.calls[0][0];
-    expect(params.options.mcpServers).toBe(mcpServers);
+    expect(params.options.cwd).toBe("/workspaces/test-session");
   });
 });
 

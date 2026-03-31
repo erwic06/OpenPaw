@@ -16,6 +16,7 @@ const DB_PATH = "/data/nanoclaw.db";
 const PLAN_PATH = `${REPO_DIR}/implementation_plan.md`;
 const SYSTEM_PROMPT_PATH = `${REPO_DIR}/agents/coder/system_prompt.md`;
 const DEFAULT_BRANCH = "main";
+const WORKSPACES_DIR = "/workspaces";
 
 const secrets = loadSecrets();
 
@@ -55,63 +56,45 @@ if (telegramToken && telegramChatId) {
 // --- Session Runner ---
 const anthropicApiKey = secrets.get("anthropic_api_key");
 const openaiApiKey = secrets.get("openai_api_key") ?? "";
-const daytonaApiKey = secrets.get("daytona_api_key");
 
-if (anthropicApiKey && daytonaApiKey) {
-  // Read repo remote URL for Daytona sandbox cloning
-  const gitResult = Bun.spawnSync([
-    "git",
-    "-C",
-    REPO_DIR,
-    "remote",
-    "get-url",
-    "origin",
-  ]);
-  const repoUrl = new TextDecoder().decode(gitResult.stdout).trim();
+if (anthropicApiKey) {
+  const runner = new SessionRunner({
+    db,
+    sendAlert,
+    anthropicApiKey,
+    openaiApiKey,
+    repoMount: REPO_DIR,
+    branch: DEFAULT_BRANCH,
+    planPath: PLAN_PATH,
+    systemPromptPath: SYSTEM_PROMPT_PATH,
+    sandboxDeps: { baseDir: WORKSPACES_DIR },
+  });
 
-  if (!repoUrl) {
-    console.warn(
-      "[nanoclaw] could not determine repo URL — headless sessions disabled",
-    );
-  } else {
-    const runner = new SessionRunner({
-      db,
-      sendAlert,
-      anthropicApiKey,
-      openaiApiKey,
-      repoUrl,
-      branch: DEFAULT_BRANCH,
-      planPath: PLAN_PATH,
-      systemPromptPath: SYSTEM_PROMPT_PATH,
-      sandboxDeps: { apiKey: daytonaApiKey },
-    });
+  // --- Plan Watcher ---
+  const watcher = watchPlan(PLAN_PATH, (readyTasks) => {
+    for (const task of readyTasks) {
+      console.log(
+        `[nanoclaw] ready task detected: ${task.id} — ${task.title}`,
+      );
+      runner.enqueue(task).catch((err) => {
+        console.error(`[nanoclaw] enqueue error for task ${task.id}: ${err}`);
+      });
+    }
+  });
 
-    // --- Plan Watcher ---
-    const watcher = watchPlan(PLAN_PATH, (readyTasks) => {
-      for (const task of readyTasks) {
-        console.log(
-          `[nanoclaw] ready task detected: ${task.id} — ${task.title}`,
-        );
-        runner.enqueue(task).catch((err) => {
-          console.error(`[nanoclaw] enqueue error for task ${task.id}: ${err}`);
-        });
-      }
-    });
+  console.log(
+    "[nanoclaw] session runner started, watching plan for ready tasks",
+  );
 
-    console.log(
-      "[nanoclaw] session runner started, watching plan for ready tasks",
-    );
-
-    // Clean shutdown
-    process.on("SIGTERM", () => {
-      console.log("[nanoclaw] SIGTERM received, shutting down...");
-      watcher.stop();
-      runner.stop();
-    });
-  }
+  // Clean shutdown
+  process.on("SIGTERM", () => {
+    console.log("[nanoclaw] SIGTERM received, shutting down...");
+    watcher.stop();
+    runner.stop();
+  });
 } else {
   console.warn(
-    "[nanoclaw] missing anthropic/daytona API keys — headless sessions disabled",
+    "[nanoclaw] missing anthropic API key — headless sessions disabled",
   );
 }
 

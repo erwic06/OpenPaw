@@ -18,15 +18,15 @@ export type ModelRoster = Record<ModelTier, ModelConfig>;
 export const DEFAULT_ROSTER: ModelRoster = {
   heavy: {
     primary: { model: "claude-opus-4-6", provider: "anthropic" },
-    fallback: { model: "gpt-5.4-high", provider: "openai" },
+    fallback: { model: "gpt-5.4", provider: "openai" },
   },
   standard: {
     primary: { model: "claude-sonnet-4-6", provider: "anthropic" },
-    fallback: { model: "gpt-5.4-medium", provider: "openai" },
+    fallback: { model: "gpt-5.4", provider: "openai" },
   },
   light: {
-    primary: { model: "claude-haiku-4-5", provider: "anthropic" },
-    fallback: { model: "gpt-5.4-mini", provider: "openai" },
+    primary: { model: "gpt-5.4-mini", provider: "openai" },
+    fallback: { model: "claude-haiku-4-5", provider: "anthropic" },
   },
 };
 

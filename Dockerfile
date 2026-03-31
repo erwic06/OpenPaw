@@ -7,7 +7,12 @@ RUN bun install --ignore-scripts --frozen-lockfile --production
 
 FROM oven/bun@sha256:0733e50325078969732ebe3b15ce4c4be5082f18c4ac1a0f0ca4839c2e4e42a7
 
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
 RUN useradd --create-home --uid 10001 --shell /bin/sh nanoclaw
+
+# Per-session workspace directory for headless agents
+RUN mkdir -p /workspaces && chown nanoclaw:nanoclaw /workspaces
 
 WORKDIR /app
 
@@ -15,8 +20,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY src/ ./src/
 COPY package.json ./
 
-# Claude Code CLI (from @anthropic-ai/claude-code) must be in PATH
-# for the Agent SDK to spawn headless sessions.
+# Claude Code CLI and Codex CLI must be in PATH for their SDKs
+# to spawn headless sessions.
 ENV PATH="/app/node_modules/.bin:${PATH}"
 
 USER nanoclaw

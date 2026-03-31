@@ -1,39 +1,30 @@
-import { Daytona, CodeLanguage } from "@daytonaio/sdk";
+import { mkdirSync, rmSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import type { SandboxConfig, SandboxDeps, SandboxHandle } from "./types.ts";
 
 export type { SandboxConfig, SandboxDeps, SandboxHandle } from "./types.ts";
 
-const WORKSPACE_DIR = "/home/daytona";
-const SANDBOX_TIMEOUT_S = 120;
-
 /** Active sandboxes keyed by session ID. */
 const activeSandboxes = new Map<string, SandboxHandle>();
 
-/** Lazily cached Daytona client. */
-let cachedClient: Daytona | null = null;
-let cachedDeps: SandboxDeps | null = null;
-
-function getClient(deps: SandboxDeps): Daytona {
-  // Re-create if deps changed (different apiKey/apiUrl).
-  if (
-    cachedClient &&
-    cachedDeps &&
-    cachedDeps.apiKey === deps.apiKey &&
-    cachedDeps.apiUrl === deps.apiUrl
-  ) {
-    return cachedClient;
+function runGit(
+  deps: SandboxDeps,
+  args: string[],
+): { exitCode: number; stdout: string; stderr: string } {
+  if (deps.spawnSyncFn) {
+    return deps.spawnSyncFn(args);
   }
-  cachedClient = new Daytona({
-    apiKey: deps.apiKey,
-    apiUrl: deps.apiUrl,
-  });
-  cachedDeps = deps;
-  return cachedClient;
+  const result = Bun.spawnSync(["git", ...args]);
+  return {
+    exitCode: result.exitCode,
+    stdout: new TextDecoder().decode(result.stdout),
+    stderr: new TextDecoder().decode(result.stderr),
+  };
 }
 
 /**
- * Create a Daytona sandbox for a headless session.
- * Clones the project repo and returns a handle for tool operations.
+ * Create a local workspace for a headless session.
+ * Clones the repo from the Docker-mounted path into a per-session directory.
  */
 export async function createSandbox(
   deps: SandboxDeps,
@@ -45,22 +36,30 @@ export async function createSandbox(
     );
   }
 
-  const client = getClient(deps);
-  const sandbox = await client.create(
-    {
-      language: CodeLanguage.TYPESCRIPT,
-      labels: { sessionId: config.sessionId },
-      autoStopInterval: 0, // disable auto-stop; we manage lifecycle
-    },
-    { timeout: SANDBOX_TIMEOUT_S },
-  );
+  const workDir = join(deps.baseDir, config.sessionId);
+  mkdirSync(workDir, { recursive: true });
 
-  await sandbox.git.clone(config.repoUrl, WORKSPACE_DIR, config.branch);
+  // Clone from local repo mount (instant, no network/auth needed)
+  const cloneResult = runGit(deps, [
+    "clone",
+    "--branch",
+    config.branch,
+    "--single-branch",
+    config.repoMount,
+    workDir,
+  ]);
+
+  if (cloneResult.exitCode !== 0) {
+    // Clean up on failure
+    rmSync(workDir, { recursive: true, force: true });
+    throw new Error(
+      `git clone failed (exit ${cloneResult.exitCode}): ${cloneResult.stderr}`,
+    );
+  }
 
   const handle: SandboxHandle = {
     sessionId: config.sessionId,
-    sandboxId: sandbox.id,
-    sandbox,
+    workDir,
   };
 
   activeSandboxes.set(config.sessionId, handle);
@@ -80,7 +79,7 @@ export function getSandbox(sessionId: string): SandboxHandle | undefined {
  * No-op if the session has no active sandbox.
  */
 export async function destroySandbox(
-  deps: SandboxDeps,
+  _deps: SandboxDeps,
   sessionId: string,
 ): Promise<void> {
   const handle = activeSandboxes.get(sessionId);
@@ -88,8 +87,9 @@ export async function destroySandbox(
     return;
   }
 
-  const client = getClient(deps);
-  await client.delete(handle.sandbox);
+  if (existsSync(handle.workDir)) {
+    rmSync(handle.workDir, { recursive: true, force: true });
+  }
   activeSandboxes.delete(sessionId);
 }
 
@@ -99,6 +99,4 @@ export async function destroySandbox(
  */
 export function _resetForTesting(): void {
   activeSandboxes.clear();
-  cachedClient = null;
-  cachedDeps = null;
 }

@@ -96,8 +96,7 @@ function failedOutput(error: string): AgentOutput {
 
 const fakeSandbox: SandboxHandle = {
   sessionId: "sandbox-test",
-  sandboxId: "sb-123",
-  sandbox: {} as any,
+  workDir: "/tmp/test-workspace",
 };
 
 let db: Database;
@@ -112,11 +111,11 @@ function makeDeps(overrides?: Partial<RunnerDeps>): RunnerDeps {
     }),
     anthropicApiKey: "test-key",
     openaiApiKey: "test-key",
-    repoUrl: "https://github.com/test/repo.git",
+    repoMount: "/repo",
     branch: "main",
     planPath: join(testDir, "implementation_plan.md"),
     systemPromptPath: join(testDir, "system_prompt.md"),
-    sandboxDeps: { apiKey: "test-daytona-key" },
+    sandboxDeps: { baseDir: "/tmp/workspaces" },
     createSandboxFn: mock(async () => fakeSandbox),
     destroySandboxFn: mock(async () => {}),
     executeSessionFn: mock(async () => successOutput()),
@@ -229,7 +228,7 @@ describe("SessionRunner.runTask", () => {
   it("handles sandbox creation failure", async () => {
     const deps = makeDeps({
       createSandboxFn: mock(async () => {
-        throw new Error("Daytona unavailable");
+        throw new Error("git clone failed");
       }),
     });
     const runner = new SessionRunner(deps);
@@ -238,7 +237,7 @@ describe("SessionRunner.runTask", () => {
     const plan = readFileSync(deps.planPath, "utf-8");
     expect(plan).toContain("- **Status:** failed");
 
-    expect(alertMessages.some((m) => m.includes("Daytona unavailable"))).toBe(
+    expect(alertMessages.some((m) => m.includes("git clone failed"))).toBe(
       true,
     );
 

@@ -25,13 +25,12 @@ function makeDeps(db: Database): CostTrackerDeps {
 }
 
 describe("PRICING", () => {
-  it("has pricing for all 6 roster models", () => {
+  it("has pricing for all roster models", () => {
     const models = [
       "claude-opus-4-6",
       "claude-sonnet-4-6",
       "claude-haiku-4-5",
-      "gpt-5.4-high",
-      "gpt-5.4-medium",
+      "gpt-5.4",
       "gpt-5.4-mini",
     ];
     for (const m of models) {
@@ -131,7 +130,7 @@ describe("getDailySpend", () => {
 
   it("sums all entries for today when no date given", () => {
     logUsage(deps, "s1", "claude-sonnet-4-6", "anthropic", 1_000_000, 0);
-    logUsage(deps, "s2", "gpt-5.4-medium", "openai", 1_000_000, 0);
+    logUsage(deps, "s2", "gpt-5.4", "openai", 1_000_000, 0);
     // 3.00 + 2.50 = 5.50
     const total = getDailySpend(deps);
     expect(total).toBeCloseTo(5.5, 4);

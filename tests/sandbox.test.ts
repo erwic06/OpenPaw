@@ -1,117 +1,112 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { mkdirSync, rmSync, existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
-// --- Mock the @daytonaio/sdk module ---
-
-const mockDelete = mock(() => Promise.resolve());
-const mockGitClone = mock(() => Promise.resolve());
-let sandboxIdCounter = 0;
-
-const mockCreate = mock(() => {
-  sandboxIdCounter++;
-  return Promise.resolve({
-    id: `sb-${sandboxIdCounter}`,
-    name: `sandbox-${sandboxIdCounter}`,
-    fs: { readFile: mock(), writeFile: mock() },
-    git: { clone: mockGitClone },
-    process: { executeCommand: mock() },
-    state: "started",
-  });
-});
-
-mock.module("@daytonaio/sdk", () => ({
-  Daytona: class MockDaytona {
-    constructor(_config?: any) {}
-    create = mockCreate;
-    delete = mockDelete;
-  },
-  CodeLanguage: { TYPESCRIPT: "typescript" },
-}));
-
-// Import after mock is set up
-const {
+import {
   createSandbox,
   getSandbox,
   destroySandbox,
   _resetForTesting,
-} = await import("../src/sandbox/index.ts");
+} from "../src/sandbox/index.ts";
 
 import type { SandboxDeps, SandboxConfig } from "../src/sandbox/types.ts";
 
-const TEST_DEPS: SandboxDeps = {
-  apiKey: "test-api-key",
-  apiUrl: "https://test.daytona.io/api",
-};
+let testBaseDir: string;
+let testRepoDir: string;
+
+function makeDeps(): SandboxDeps {
+  return { baseDir: testBaseDir };
+}
 
 function makeConfig(sessionId: string): SandboxConfig {
   return {
     sessionId,
-    repoUrl: "https://github.com/user/repo.git",
+    repoMount: testRepoDir,
     branch: "main",
   };
 }
 
 beforeEach(() => {
   _resetForTesting();
-  mockCreate.mockClear();
-  mockDelete.mockClear();
-  mockGitClone.mockClear();
-  sandboxIdCounter = 0;
+
+  // Create a temp base directory for workspaces
+  testBaseDir = join(tmpdir(), `openpaw-test-workspaces-${Date.now()}`);
+  mkdirSync(testBaseDir, { recursive: true });
+
+  // Create a real git repo as the "source" to clone from
+  testRepoDir = join(tmpdir(), `openpaw-test-repo-${Date.now()}`);
+  mkdirSync(testRepoDir, { recursive: true });
+
+  Bun.spawnSync(["git", "init", "--initial-branch", "main", testRepoDir]);
+  Bun.spawnSync(["git", "-C", testRepoDir, "config", "user.email", "test@test.com"]);
+  Bun.spawnSync(["git", "-C", testRepoDir, "config", "user.name", "Test"]);
+  writeFileSync(join(testRepoDir, "README.md"), "# Test Repo\n");
+  Bun.spawnSync(["git", "-C", testRepoDir, "add", "."]);
+  Bun.spawnSync(["git", "-C", testRepoDir, "commit", "-m", "initial"]);
+});
+
+afterEach(() => {
+  _resetForTesting();
+  rmSync(testBaseDir, { recursive: true, force: true });
+  rmSync(testRepoDir, { recursive: true, force: true });
 });
 
 describe("createSandbox", () => {
-  it("creates a sandbox and returns a handle", async () => {
-    const handle = await createSandbox(TEST_DEPS, makeConfig("s1"));
+  it("creates a workspace directory with cloned repo", async () => {
+    const handle = await createSandbox(makeDeps(), makeConfig("s1"));
     expect(handle.sessionId).toBe("s1");
-    expect(handle.sandboxId).toBe("sb-1");
-    expect(handle.sandbox).toBeDefined();
-    expect(handle.sandbox.fs).toBeDefined();
-    expect(handle.sandbox.git).toBeDefined();
-    expect(handle.sandbox.process).toBeDefined();
-  });
-
-  it("calls Daytona.create with typescript language and session label", async () => {
-    await createSandbox(TEST_DEPS, makeConfig("s1"));
-    expect(mockCreate).toHaveBeenCalledTimes(1);
-    const [params, options] = mockCreate.mock.calls[0];
-    expect(params.language).toBe("typescript");
-    expect(params.labels).toEqual({ sessionId: "s1" });
-    expect(params.autoStopInterval).toBe(0);
-    expect(options.timeout).toBe(120);
-  });
-
-  it("clones repo into workspace after creation", async () => {
-    const config = makeConfig("s1");
-    await createSandbox(TEST_DEPS, config);
-    expect(mockGitClone).toHaveBeenCalledTimes(1);
-    expect(mockGitClone).toHaveBeenCalledWith(
-      config.repoUrl,
-      "/home/daytona",
-      config.branch,
-    );
+    expect(handle.workDir).toBe(join(testBaseDir, "s1"));
+    expect(existsSync(join(handle.workDir, "README.md"))).toBe(true);
+    expect(existsSync(join(handle.workDir, ".git"))).toBe(true);
   });
 
   it("throws if sandbox already exists for session", async () => {
-    await createSandbox(TEST_DEPS, makeConfig("s1"));
-    expect(createSandbox(TEST_DEPS, makeConfig("s1"))).rejects.toThrow(
+    await createSandbox(makeDeps(), makeConfig("s1"));
+    expect(createSandbox(makeDeps(), makeConfig("s1"))).rejects.toThrow(
       "Sandbox already exists for session: s1",
     );
   });
 
   it("allows creating sandboxes for different sessions", async () => {
-    const h1 = await createSandbox(TEST_DEPS, makeConfig("s1"));
-    const h2 = await createSandbox(TEST_DEPS, makeConfig("s2"));
-    expect(h1.sandboxId).toBe("sb-1");
-    expect(h2.sandboxId).toBe("sb-2");
+    const h1 = await createSandbox(makeDeps(), makeConfig("s1"));
+    const h2 = await createSandbox(makeDeps(), makeConfig("s2"));
+    expect(h1.workDir).not.toBe(h2.workDir);
+    expect(existsSync(h1.workDir)).toBe(true);
+    expect(existsSync(h2.workDir)).toBe(true);
+  });
+
+  it("clones the correct branch", async () => {
+    // Create a second branch in the source repo
+    Bun.spawnSync(["git", "-C", testRepoDir, "checkout", "-b", "dev"]);
+    writeFileSync(join(testRepoDir, "dev-file.txt"), "dev content\n");
+    Bun.spawnSync(["git", "-C", testRepoDir, "add", "."]);
+    Bun.spawnSync(["git", "-C", testRepoDir, "commit", "-m", "dev commit"]);
+    Bun.spawnSync(["git", "-C", testRepoDir, "checkout", "main"]);
+
+    const config = makeConfig("s1");
+    config.branch = "dev";
+    const handle = await createSandbox(makeDeps(), config);
+    expect(existsSync(join(handle.workDir, "dev-file.txt"))).toBe(true);
+  });
+
+  it("throws on clone failure and cleans up", async () => {
+    const config = makeConfig("s1");
+    config.branch = "nonexistent-branch";
+    expect(createSandbox(makeDeps(), config)).rejects.toThrow(
+      "git clone failed",
+    );
+    // Workspace should be cleaned up
+    expect(existsSync(join(testBaseDir, "s1"))).toBe(false);
   });
 });
 
 describe("getSandbox", () => {
   it("returns the handle for an active session", async () => {
-    await createSandbox(TEST_DEPS, makeConfig("s1"));
+    await createSandbox(makeDeps(), makeConfig("s1"));
     const handle = getSandbox("s1");
     expect(handle).toBeDefined();
     expect(handle!.sessionId).toBe("s1");
-    expect(handle!.sandboxId).toBe("sb-1");
   });
 
   it("returns undefined for unknown session", () => {
@@ -119,38 +114,39 @@ describe("getSandbox", () => {
   });
 
   it("returns undefined after sandbox is destroyed", async () => {
-    await createSandbox(TEST_DEPS, makeConfig("s1"));
-    await destroySandbox(TEST_DEPS, "s1");
+    await createSandbox(makeDeps(), makeConfig("s1"));
+    await destroySandbox(makeDeps(), "s1");
     expect(getSandbox("s1")).toBeUndefined();
   });
 });
 
 describe("destroySandbox", () => {
-  it("calls Daytona.delete and removes from map", async () => {
-    await createSandbox(TEST_DEPS, makeConfig("s1"));
-    await destroySandbox(TEST_DEPS, "s1");
-    expect(mockDelete).toHaveBeenCalledTimes(1);
+  it("removes directory and clears from map", async () => {
+    const handle = await createSandbox(makeDeps(), makeConfig("s1"));
+    await destroySandbox(makeDeps(), "s1");
+    expect(existsSync(handle.workDir)).toBe(false);
     expect(getSandbox("s1")).toBeUndefined();
   });
 
   it("is a no-op for unknown session", async () => {
-    await destroySandbox(TEST_DEPS, "nonexistent");
-    expect(mockDelete).not.toHaveBeenCalled();
+    await destroySandbox(makeDeps(), "nonexistent");
+    // No throw
   });
 
   it("allows re-creating sandbox after destroy", async () => {
-    await createSandbox(TEST_DEPS, makeConfig("s1"));
-    await destroySandbox(TEST_DEPS, "s1");
-    const handle = await createSandbox(TEST_DEPS, makeConfig("s1"));
-    expect(handle.sandboxId).toBe("sb-2");
-    expect(getSandbox("s1")).toBeDefined();
+    await createSandbox(makeDeps(), makeConfig("s1"));
+    await destroySandbox(makeDeps(), "s1");
+    const handle = await createSandbox(makeDeps(), makeConfig("s1"));
+    expect(handle.sessionId).toBe("s1");
+    expect(existsSync(handle.workDir)).toBe(true);
   });
 
   it("only destroys the specified session", async () => {
-    await createSandbox(TEST_DEPS, makeConfig("s1"));
-    await createSandbox(TEST_DEPS, makeConfig("s2"));
-    await destroySandbox(TEST_DEPS, "s1");
-    expect(getSandbox("s1")).toBeUndefined();
+    const h1 = await createSandbox(makeDeps(), makeConfig("s1"));
+    const h2 = await createSandbox(makeDeps(), makeConfig("s2"));
+    await destroySandbox(makeDeps(), "s1");
+    expect(existsSync(h1.workDir)).toBe(false);
+    expect(existsSync(h2.workDir)).toBe(true);
     expect(getSandbox("s2")).toBeDefined();
   });
 });

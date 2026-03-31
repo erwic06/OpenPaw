@@ -2,7 +2,7 @@
 
 **Project:** OpenPaw
 **Current Phase:** Phase 3 -- Headless Coding
-**Last Updated:** 2026-03-29
+**Last Updated:** 2026-03-30
 
 ---
 
@@ -161,21 +161,20 @@
 
 ---
 
-### 3.4 -- Daytona Sandbox Manager
+### 3.4 -- Local Workspace Manager
 - **Status:** complete
 - **Type:** code
-- **Contract:** contracts/3.4-daytona-sandbox.md
+- **Contract:** contracts/3.4-local-workspace.md
 - **Dependencies:** 3.1
 - **Assigned:** interactive
 - **Artifacts:** `src/sandbox/types.ts`, `src/sandbox/index.ts`
-- **Acceptance:** Sandbox create/get/destroy lifecycle, package audit, tests pass
+- **Acceptance:** Workspace create/get/destroy lifecycle via local dirs + git clone; tests pass
 
 #### Notes
-- @daytonaio/sdk 0.158.0: 23 direct deps, 243 installed packages, 0 audit vulnerabilities
-- protobufjs postinstall blocked (opentelemetry transitive dep); no runtime impact
-- SandboxHandle exposes raw Sandbox instance with fs/git/process for MCP tools (task 3.6)
-- Daytona client lazily cached and reused across sandbox operations
-- 12 new tests with mocked SDK, 63 total passing
+- Originally Daytona sandbox manager; rewritten in lean integration overhaul (session 17)
+- Now uses local directories + git clone from /repo mount — zero external dependencies
+- SandboxDeps simplified to { baseDir }; SandboxHandle simplified to { sessionId, workDir }
+- 12 tests using real temp directories and local git repos
 #### Failure History
 
 ---
@@ -191,7 +190,7 @@
 
 #### Notes
 - @anthropic-ai/claude-agent-sdk 0.2.87 (2 direct deps: @anthropic-ai/sdk, @modelcontextprotocol/sdk), @anthropic-ai/claude-code 2.1.87 (0 deps), zod 4.3.6 (0 deps); 0 audit vulnerabilities
-- DI via LLMAdapterDeps: queryFn override for testing, mcpServers for Task 3.6 integration
+- DI via LLMAdapterDeps: queryFn override for testing, cwd for workspace directory
 - Background session execution: trigger() returns immediately, runSession() iterates query() async generator
 - getLastActivityMs() exposed for session monitoring (Task 3.8)
 - Result usage is treated as cumulative (overwrites, not adds)
@@ -201,22 +200,23 @@
 
 ---
 
-### 3.6 -- Daytona MCP Tools for Coder
+### 3.6 -- Codex Adapter (replaced Daytona MCP Tools)
 - **Status:** complete
 - **Type:** code
-- **Contract:** contracts/3.6-daytona-mcp-tools.md
+- **Contract:** contracts/3.6-codex-adapter.md
 - **Dependencies:** 3.4, 3.5
 - **Assigned:** interactive
-- **Artifacts:** `src/agents/tools/daytona-tools.ts`, `src/agents/tools/index.ts`
-- **Acceptance:** File, shell, and git tools proxy through Daytona sandbox; path scoping enforced; tests pass
+- **Artifacts:** `src/agents/codex-adapter.ts`
+- **Acceptance:** CodexAdapter implements AgentAdapter, spawns Codex sessions via @openai/codex-sdk, tracks usage; tests pass
 
 #### Notes
-- 11 MCP tools: file_read, file_write, file_list, shell_exec, git_status, git_add, git_commit, git_push, git_diff, git_create_branch, git_checkout
-- Path validation: all file ops scoped to /workspace/ prefix; directory traversal rejected
-- git_diff uses process.executeCommand since Daytona Git API has no native diff method
-- Sandbox property is `fs` (not `filesystem`) per Daytona SDK types
-- No new packages; uses Agent SDK tool()/createSdkMcpServer() and zod from Task 3.5
-- 21 new tests, 104 total passing
+- Originally Daytona MCP tools; replaced with CodexAdapter in lean integration overhaul (session 17)
+- @openai/codex-sdk 0.117.0 (1 dep: @openai/codex CLI); Daytona SDK and openai package removed
+- CodexAdapter mirrors LLMAdapter: startThread/runStreamed, event-based usage tracking, DI via codexFactory
+- Codex uses native tools (file/shell/git) — no MCP tools needed
+- Model mapping: light → gpt-5.4-mini, standard/heavy → gpt-5.4
+- Tier-based routing: heavy/standard → Claude Code, light → Codex, with cross-provider fallback
+- 20 new Codex adapter tests
 #### Failure History
 
 ---
@@ -227,16 +227,14 @@
 - **Contract:** contracts/3.7-fallback-routing.md
 - **Dependencies:** 3.5
 - **Assigned:** interactive
-- **Artifacts:** `src/agents/fallback.ts`, `src/agents/openai-adapter.ts`
-- **Acceptance:** Retry with backoff, fallback to OpenAI per roster, Telegram alert on fallback; tests pass
+- **Artifacts:** `src/agents/fallback.ts`
+- **Acceptance:** Retry with backoff, cross-provider fallback, Telegram alert on fallback; tests pass
 
 #### Notes
-- openai 6.33.0 (0 direct deps, 0 audit vulnerabilities); published by OpenAI maintainers
-- docker-compose.yml already had openai_api_key secret from initial setup
 - FallbackRouter: standalone `executeWithFallback()` function with DI sleep for testing; non-retryable errors propagate immediately
-- OpenAIAdapter: full tool-call loop via DI chatCreate; mirrors LLMAdapter pattern (trigger/status/output/cancel/getLastActivityMs)
 - isRetryableError detects: rate limit, 429, quota, overloaded, 503, 529, connection, timeout, ECONNRESET, ECONNREFUSED
-- 25 new tests, 129 total passing
+- OpenAIAdapter (openai 6.33.0) deleted in lean integration overhaul (session 17); replaced by CodexAdapter in task 3.6
+- Fallback tests updated: removed OpenAI adapter tests, kept core fallback routing tests
 #### Failure History
 
 ---
@@ -273,21 +271,21 @@
 - SessionRunner: DI-based orchestrator with sequential dispatch (drainQueue loop), sandbox lifecycle, fallback routing, monitoring
 - Plan writer: line-by-line status replacement; notes inserted before Failure History section
 - index.ts wired: database, Telegram, HITL gates, SessionRunner, plan watcher with SIGTERM shutdown
-- Added waitForCompletion() to LLMAdapter and OpenAIAdapter for synchronous session await
+- Added waitForCompletion() to LLMAdapter and CodexAdapter for synchronous session await
 - Added optional getLastActivityMs to MonitorDeps for adapter-delegated activity tracking
 - 26 new tests (8 plan-writer + 18 runner), 172 total passing
 #### Failure History
 
 ---
 
-### 3.10 -- Cubic Integration
+### 3.10 -- Code Review (Claude Reviewer)
 - **Status:** ready
 - **Type:** code
-- **Contract:** contracts/3.10-cubic-integration.md
+- **Contract:** contracts/3.10-code-review.md
 - **Dependencies:** 3.6
 - **Assigned:** interactive
-- **Artifacts:** `src/integrations/cubic.ts`
-- **Acceptance:** Polls GitHub for Cubic review, captures summary; tests pass
+- **Artifacts:** `src/review/types.ts`, `src/review/index.ts`, `agents/reviewer/system_prompt.md`
+- **Acceptance:** Claude Reviewer session reviews git diff, returns structured findings; tests pass
 
 #### Notes
 #### Failure History
@@ -342,3 +340,4 @@
 | 14      | 2026-03-29 | 3.7  | complete | —      | Fallback routing: executeWithFallback() with exponential backoff (30s/60s/120s), isRetryableError detection. OpenAIAdapter with tool-call loop via DI chatCreate. openai 6.33.0 (0 deps). 25 new tests, 129 total. |
 | 15      | 2026-03-29 | 3.8  | complete | —      | Session monitoring: SessionMonitor class tracks active sessions, detects 10min inactivity, cancels hung sessions, updates SQLite to FAILED, sends Telegram alert. DI with fake time for testing. No new packages. 17 new tests, 146 total. |
 | 16      | 2026-03-30 | 3.9  | complete | —      | Session runner + orchestrator wiring: SessionRunner with sequential dispatch, plan writer, index.ts wired with all subsystems (db, Telegram, gates, runner, plan watcher, SIGTERM). waitForCompletion on adapters, getLastActivityMs on monitor. No new packages. 26 new tests, 172 total. |
+| 17      | 2026-03-30 | 3.4/3.6/3.7 | complete | —  | Lean integration overhaul: removed Daytona SDK (243 packages) and openai package, replaced with local workspaces (git clone /repo) and CodexAdapter (@openai/codex-sdk 0.117.0). LLMAdapter uses cwd instead of mcpServers. Tier-based routing: heavy/standard → Claude Code, light → Codex, cross-provider fallback. Deleted openai-adapter.ts, daytona-tools.ts, tools/index.ts. Updated system prompt, Docker config, pricing. 156 tests passing. |

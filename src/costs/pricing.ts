@@ -15,10 +15,7 @@ export const PRICING: Record<string, TokenPricing> = {
   "claude-sonnet-4-6": { input: 3.00,  output: 15.00 },
   "claude-haiku-4-5":  { input: 1.00,  output: 5.00  },
 
-  // --- OpenAI ---
-  // gpt-5.4-high and gpt-5.4-medium are the same model (gpt-5.4) with
-  // different reasoning.effort settings. Per-token rate is identical.
-  "gpt-5.4-high":   { input: 2.50,  output: 15.00 },
-  "gpt-5.4-medium": { input: 2.50,  output: 15.00 },
-  "gpt-5.4-mini":   { input: 0.75,  output: 4.50  },
+  // --- OpenAI (Codex) ---
+  "gpt-5.4":      { input: 2.50,  output: 15.00 },
+  "gpt-5.4-mini": { input: 0.75,  output: 4.50  },
 };

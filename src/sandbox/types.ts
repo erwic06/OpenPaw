@@ -1,24 +1,19 @@
-import type { Sandbox } from "@daytonaio/sdk";
-
 /** Dependencies injected into sandbox manager for testability. */
 export interface SandboxDeps {
-  apiKey: string;
-  apiUrl?: string;
+  baseDir: string;
+  /** Override for testing — replaces Bun.spawnSync. */
+  spawnSyncFn?: (args: string[]) => { exitCode: number; stdout: string; stderr: string };
 }
 
 /** Parameters for creating a new sandbox. */
 export interface SandboxConfig {
   sessionId: string;
-  repoUrl: string;
+  repoMount: string;
   branch: string;
 }
 
-/**
- * Handle to an active Daytona sandbox, exposing the three operation
- * categories that MCP tools need: filesystem, process, and git.
- */
+/** Handle to an active local workspace for a headless session. */
 export interface SandboxHandle {
   sessionId: string;
-  sandboxId: string;
-  sandbox: Sandbox;
+  workDir: string;
 }
