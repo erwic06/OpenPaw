@@ -10,6 +10,8 @@ export interface MonitorDeps {
   sendAlert: (message: string) => Promise<void>;
   /** Override for testing. */
   now?: () => number;
+  /** Optional: get real activity time from adapter. Falls back to internal tracking. */
+  getLastActivityMs?: (sessionId: string) => number | undefined;
 }
 
 export class SessionMonitor {
@@ -58,7 +60,8 @@ export class SessionMonitor {
     const now = this.deps.now?.() ?? Date.now();
 
     for (const [sessionId, lastActive] of this.sessions) {
-      if (now - lastActive > HUNG_THRESHOLD_MS) {
+      const realLastActive = this.deps.getLastActivityMs?.(sessionId) ?? lastActive;
+      if (now - realLastActive > HUNG_THRESHOLD_MS) {
         await this.handleHung(sessionId);
       }
     }

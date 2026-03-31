@@ -30,3 +30,6 @@ export type {
 
 export { SessionMonitor } from "./monitor.ts";
 export type { MonitorDeps } from "./monitor.ts";
+
+export { SessionRunner } from "./runner.ts";
+export type { RunnerDeps } from "./runner.ts";

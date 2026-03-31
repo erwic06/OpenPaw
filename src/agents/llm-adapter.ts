@@ -162,6 +162,13 @@ export class LLMAdapter implements AgentAdapter {
     return this.sessions.get(sessionId)?.lastActivityMs;
   }
 
+  /** Wait for a session to reach a terminal state. */
+  async waitForCompletion(sessionId: string): Promise<void> {
+    const state = this.sessions.get(sessionId);
+    if (!state) throw new Error(`Unknown session: ${sessionId}`);
+    await state.runPromise;
+  }
+
   private async runSession(
     sessionId: string,
     state: SessionState,

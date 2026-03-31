@@ -261,7 +261,7 @@
 ---
 
 ### 3.9 -- Session Runner + Orchestrator Wiring
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.9-session-runner.md
 - **Dependencies:** 3.2, 3.6, 3.7, 3.8
@@ -270,6 +270,12 @@
 - **Acceptance:** Full task lifecycle orchestration, plan writer, index.ts wiring; tests pass
 
 #### Notes
+- SessionRunner: DI-based orchestrator with sequential dispatch (drainQueue loop), sandbox lifecycle, fallback routing, monitoring
+- Plan writer: line-by-line status replacement; notes inserted before Failure History section
+- index.ts wired: database, Telegram, HITL gates, SessionRunner, plan watcher with SIGTERM shutdown
+- Added waitForCompletion() to LLMAdapter and OpenAIAdapter for synchronous session await
+- Added optional getLastActivityMs to MonitorDeps for adapter-delegated activity tracking
+- 26 new tests (8 plan-writer + 18 runner), 172 total passing
 #### Failure History
 
 ---
@@ -289,7 +295,7 @@
 ---
 
 ### 3.11 -- Deploy Gate Wiring
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/3.11-deploy-gate.md
 - **Dependencies:** 3.9
@@ -303,7 +309,7 @@
 ---
 
 ### 3.12 -- Restart Recovery
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/3.12-restart-recovery.md
 - **Dependencies:** 3.9
@@ -335,3 +341,4 @@
 | 13      | 2026-03-29 | 3.6  | complete | —      | Daytona MCP tools: 11 tools (3 file, 1 shell, 7 git) via Agent SDK tool()/createSdkMcpServer(). Path scoping to /workspace/. No new packages. 21 new tests, 104 total. |
 | 14      | 2026-03-29 | 3.7  | complete | —      | Fallback routing: executeWithFallback() with exponential backoff (30s/60s/120s), isRetryableError detection. OpenAIAdapter with tool-call loop via DI chatCreate. openai 6.33.0 (0 deps). 25 new tests, 129 total. |
 | 15      | 2026-03-29 | 3.8  | complete | —      | Session monitoring: SessionMonitor class tracks active sessions, detects 10min inactivity, cancels hung sessions, updates SQLite to FAILED, sends Telegram alert. DI with fake time for testing. No new packages. 17 new tests, 146 total. |
+| 16      | 2026-03-30 | 3.9  | complete | —      | Session runner + orchestrator wiring: SessionRunner with sequential dispatch, plan writer, index.ts wired with all subsystems (db, Telegram, gates, runner, plan watcher, SIGTERM). waitForCompletion on adapters, getLastActivityMs on monitor. No new packages. 26 new tests, 172 total. |

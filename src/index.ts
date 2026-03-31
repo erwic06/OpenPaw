@@ -1,19 +1,118 @@
 import { loadSecrets } from "./secrets.ts";
-import { createBot, startBot } from "./messaging/index.ts";
+import {
+  createBot,
+  startBot,
+  sendMessage,
+  onMessage,
+} from "./messaging/index.ts";
+import { initDatabase } from "./db/index.ts";
+import { initGates } from "./gates/index.ts";
+import { watchPlan } from "./plan/reader.ts";
+import { SessionRunner } from "./agents/runner.ts";
 
 const HEALTH_PORT = 9999;
+const REPO_DIR = "/repo";
+const DB_PATH = "/data/nanoclaw.db";
+const PLAN_PATH = `${REPO_DIR}/implementation_plan.md`;
+const SYSTEM_PROMPT_PATH = `${REPO_DIR}/agents/coder/system_prompt.md`;
+const DEFAULT_BRANCH = "main";
 
 const secrets = loadSecrets();
+
+// --- Database ---
+const db = initDatabase(DB_PATH);
+console.log(`[nanoclaw] database initialized: ${DB_PATH}`);
 
 // --- Telegram bot ---
 const telegramToken = secrets.get("telegram_bot_token");
 const telegramChatId = secrets.get("telegram_chat_id");
 
+let sendAlert: (message: string) => Promise<void>;
+
 if (telegramToken && telegramChatId) {
   createBot(telegramToken, telegramChatId);
   startBot();
+
+  sendAlert = async (msg: string) => {
+    await sendMessage(telegramChatId, msg);
+  };
+
+  // --- HITL Gates ---
+  initGates({
+    db,
+    chatId: parseInt(telegramChatId, 10),
+    send: sendMessage,
+    onMessage,
+  });
+  console.log("[nanoclaw] HITL gates initialized");
 } else {
   console.warn("[nanoclaw] telegram secrets missing — bot disabled");
+  sendAlert = async (msg: string) => {
+    console.log(`[nanoclaw] alert (no telegram): ${msg}`);
+  };
+}
+
+// --- Session Runner ---
+const anthropicApiKey = secrets.get("anthropic_api_key");
+const openaiApiKey = secrets.get("openai_api_key") ?? "";
+const daytonaApiKey = secrets.get("daytona_api_key");
+
+if (anthropicApiKey && daytonaApiKey) {
+  // Read repo remote URL for Daytona sandbox cloning
+  const gitResult = Bun.spawnSync([
+    "git",
+    "-C",
+    REPO_DIR,
+    "remote",
+    "get-url",
+    "origin",
+  ]);
+  const repoUrl = new TextDecoder().decode(gitResult.stdout).trim();
+
+  if (!repoUrl) {
+    console.warn(
+      "[nanoclaw] could not determine repo URL — headless sessions disabled",
+    );
+  } else {
+    const runner = new SessionRunner({
+      db,
+      sendAlert,
+      anthropicApiKey,
+      openaiApiKey,
+      repoUrl,
+      branch: DEFAULT_BRANCH,
+      planPath: PLAN_PATH,
+      systemPromptPath: SYSTEM_PROMPT_PATH,
+      sandboxDeps: { apiKey: daytonaApiKey },
+    });
+
+    // --- Plan Watcher ---
+    const watcher = watchPlan(PLAN_PATH, (readyTasks) => {
+      for (const task of readyTasks) {
+        console.log(
+          `[nanoclaw] ready task detected: ${task.id} — ${task.title}`,
+        );
+        runner.enqueue(task).catch((err) => {
+          console.error(`[nanoclaw] enqueue error for task ${task.id}: ${err}`);
+        });
+      }
+    });
+
+    console.log(
+      "[nanoclaw] session runner started, watching plan for ready tasks",
+    );
+
+    // Clean shutdown
+    process.on("SIGTERM", () => {
+      console.log("[nanoclaw] SIGTERM received, shutting down...");
+      watcher.stop();
+      runner.stop();
+    });
+  }
+} else {
+  console.warn(
+    "[nanoclaw] missing anthropic/daytona API keys — headless sessions disabled",
+  );
 }
 
 // --- Health endpoint ---
@@ -24,5 +123,7 @@ const server = Bun.serve({
   },
 });
 
-console.log(`[nanoclaw] NanoClaw daemon running (health: http://localhost:${server.port})`);
+console.log(
+  `[nanoclaw] NanoClaw daemon running (health: http://localhost:${server.port})`,
+);
 console.log(`[nanoclaw] secrets: ${secrets.size}, pid: ${process.pid}`);
