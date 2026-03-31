@@ -298,7 +298,7 @@
 ---
 
 ### 3.11 -- Deploy Gate Wiring
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.11-deploy-gate.md
 - **Dependencies:** 3.9
@@ -307,6 +307,11 @@
 - **Acceptance:** Deploy-tagged tasks trigger Gate 2 with context; tests pass
 
 #### Notes
+- Parser extended: `- **Deploy:** production|staging` tag, propagated through finalizeTask
+- Runner: deploy gate step after review, requestApprovalFn DI, assembleDeployContext with diff truncation
+- On approved → complete, on denied/timeout → blocked with note
+- Deploy gate skipped when: no deploy tag, coder failed, review rejected
+- 18 new tests (4 parser + 6 context + 8 runner integration), 200 total passing
 #### Failure History
 
 ---
@@ -347,3 +352,4 @@
 | 16      | 2026-03-30 | 3.9  | complete | —      | Session runner + orchestrator wiring: SessionRunner with sequential dispatch, plan writer, index.ts wired with all subsystems (db, Telegram, gates, runner, plan watcher, SIGTERM). waitForCompletion on adapters, getLastActivityMs on monitor. No new packages. 26 new tests, 172 total. |
 | 17      | 2026-03-30 | 3.4/3.6/3.7 | complete | —  | Lean integration overhaul: removed Daytona SDK (243 packages) and openai package, replaced with local workspaces (git clone /repo) and CodexAdapter (@openai/codex-sdk 0.117.0). LLMAdapter uses cwd instead of mcpServers. Tier-based routing: heavy/standard → Claude Code, light → Codex, cross-provider fallback. Deleted openai-adapter.ts, daytona-tools.ts, tools/index.ts. Updated system prompt, Docker config, pricing. 156 tests passing. |
 | 18      | 2026-03-31 | 3.10 | complete | —  | Code review module: ReviewResult/ReviewFinding types, runCodeReview with ReviewExecutor DI, parseReviewResult (bare/fenced JSON), adversarial reviewer system prompt, runner integration (REQUEST_CHANGES → failed, crash → soft pass). No new packages. 25 new tests, 182 total. |
+| 19      | 2026-03-31 | 3.11 | complete | —  | Deploy gate wiring: parser extended with deploy tag, runner calls requestApproval for deploy-tagged tasks, assembleDeployContext with diff/review/session summary. Approved → complete, denied/timeout → blocked. No new packages. 18 new tests, 200 total. |

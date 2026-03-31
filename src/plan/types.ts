@@ -9,4 +9,5 @@ export interface Task {
   artifacts: string[];
   acceptance: string;
   notes: string[];
+  deploy?: "production" | "staging";
 }

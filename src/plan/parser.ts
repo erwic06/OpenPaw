@@ -8,6 +8,7 @@ const DEPENDENCIES = /^- \*\*Dependencies:\*\* (.+)/;
 const ASSIGNED = /^- \*\*Assigned:\*\* (.+)/;
 const ARTIFACTS = /^- \*\*Artifacts:\*\* (.+)/;
 const ACCEPTANCE = /^- \*\*Acceptance:\*\* (.+)/;
+const DEPLOY = /^- \*\*Deploy:\*\* (production|staging)/;
 const NOTES_HEADER = /^#### Notes$/;
 const FAILURE_HEADER = /^#### Failure History$/;
 const TASK_SEPARATOR = /^---$/;
@@ -125,6 +126,12 @@ export function parsePlan(content: string): Task[] {
       current.acceptance = acceptanceMatch[1].trim();
       continue;
     }
+
+    const deployMatch = line.match(DEPLOY);
+    if (deployMatch) {
+      current.deploy = deployMatch[1] as "production" | "staging";
+      continue;
+    }
   }
 
   if (current && current.id) {
@@ -146,6 +153,7 @@ function finalizeTask(partial: Partial<Task>): Task {
     artifacts: partial.artifacts ?? [],
     acceptance: partial.acceptance ?? "",
     notes: partial.notes ?? [],
+    deploy: partial.deploy,
   };
 
   if (!task.id || !task.title) {

@@ -15,6 +15,8 @@ import type { SandboxDeps, SandboxConfig, SandboxHandle } from "../sandbox/types
 import { updateTaskStatus } from "../plan/writer.ts";
 import { runCodeReview } from "../review/index.ts";
 import type { ReviewResult } from "../review/types.ts";
+import { requestApproval as realRequestApproval } from "../gates/index.ts";
+import type { GateRequest, GateResult } from "../gates/types.ts";
 
 export interface RunnerDeps {
   db: Database;
@@ -34,12 +36,60 @@ export interface RunnerDeps {
   executeSessionFn?: (task: Task, sandbox: SandboxHandle) => Promise<AgentOutput>;
   /** Override for testing. Replaces the entire code review step. */
   runReviewFn?: (task: Task, sandbox: SandboxHandle) => Promise<ReviewResult | null>;
+  /** Override for testing. Replaces the HITL deploy gate request. */
+  requestApprovalFn?: (request: GateRequest) => Promise<GateResult>;
 }
 
 /** Session tracking for monitoring cancel/activity routing. */
 interface ActiveSession {
   cancel: (sessionId: string) => Promise<void>;
   getLastActivityMs: (sessionId: string) => number | undefined;
+}
+
+const MAX_DIFF_CHARS = 2000;
+
+/** Assemble context summary for deploy gate approval request. */
+export function assembleDeployContext(
+  task: Task,
+  output: AgentOutput,
+  review: ReviewResult | null,
+  diff: string,
+): string {
+  const lines: string[] = [];
+
+  lines.push(`Task: ${task.id} — ${task.title}`);
+  lines.push(`Target: ${task.deploy ?? "unknown"}`);
+  lines.push("");
+
+  lines.push("--- Session ---");
+  lines.push(`Status: ${output.terminalState}`);
+  lines.push(`Cost: $${output.costUsd.toFixed(4)}`);
+  lines.push(`Tokens: ${output.usage.inputTokens} in / ${output.usage.outputTokens} out`);
+  lines.push("");
+
+  if (review) {
+    lines.push("--- Code Review ---");
+    lines.push(`Verdict: ${review.verdict}`);
+    lines.push(`Summary: ${review.summary}`);
+    if (review.findings.length > 0) {
+      for (const f of review.findings) {
+        lines.push(`  [${f.severity}] ${f.file}:${f.line} — ${f.description}`);
+      }
+    }
+    lines.push("");
+  }
+
+  if (diff.trim()) {
+    lines.push("--- Git Diff ---");
+    if (diff.length > MAX_DIFF_CHARS) {
+      lines.push(diff.slice(0, MAX_DIFF_CHARS));
+      lines.push(`\n... (truncated, ${diff.length} chars total — full diff available via git)`);
+    } else {
+      lines.push(diff);
+    }
+  }
+
+  return lines.join("\n");
 }
 
 export class SessionRunner {
@@ -124,21 +174,36 @@ export class SessionRunner {
         : await this.executeSession(task, sandboxHandle);
 
       // 4. Code review (only on coder success)
-      let finalStatus: "complete" | "failed" =
+      let finalStatus: string =
         output.terminalState === "complete" ? "complete" : "failed";
       let statusNotes = output.error
         ? `Session error: ${output.error}`
         : undefined;
 
+      let review: ReviewResult | null = null;
       if (finalStatus === "complete" && sandboxHandle) {
-        const review = await this.reviewChanges(task, sandboxHandle);
+        review = await this.reviewChanges(task, sandboxHandle);
         if (review?.verdict === "REQUEST_CHANGES") {
           finalStatus = "failed";
           statusNotes = `Code review rejected: ${review.summary}`;
         }
       }
 
-      // 5. Update plan with result
+      // 5. Deploy gate (only on success + deploy-tagged tasks)
+      if (finalStatus === "complete" && task.deploy) {
+        const gateResult = await this.requestDeployApproval(
+          task,
+          output,
+          sandboxHandle,
+          review,
+        );
+        if (gateResult.decision !== "approved") {
+          finalStatus = "blocked";
+          statusNotes = `Deploy ${gateResult.decision}: ${task.deploy} deploy for task ${task.id}`;
+        }
+      }
+
+      // 6. Update plan with result
       await updateTaskStatus(
         this.deps.planPath,
         task.id,
@@ -183,6 +248,33 @@ export class SessionRunner {
         }
       }
     }
+  }
+
+  /** Request deploy approval via HITL gate. */
+  private async requestDeployApproval(
+    task: Task,
+    output: AgentOutput,
+    sandbox: SandboxHandle | undefined,
+    review: ReviewResult | null,
+  ): Promise<GateResult> {
+    let diff = "";
+    if (sandbox) {
+      try {
+        diff = await this.getWorkspaceDiff(sandbox);
+      } catch {
+        diff = "(diff unavailable)";
+      }
+    }
+
+    const context = assembleDeployContext(task, output, review, diff);
+    const requestFn = this.deps.requestApprovalFn ?? realRequestApproval;
+
+    return requestFn({
+      gateType: "deploy",
+      taskId: task.id,
+      sessionId: output.sessionId,
+      contextSummary: context,
+    });
   }
 
   /** Run code review on workspace changes. Returns null on failure (soft pass). */
