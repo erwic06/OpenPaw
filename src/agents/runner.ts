@@ -13,6 +13,8 @@ import {
 } from "../sandbox/index.ts";
 import type { SandboxDeps, SandboxConfig, SandboxHandle } from "../sandbox/types.ts";
 import { updateTaskStatus } from "../plan/writer.ts";
+import { runCodeReview } from "../review/index.ts";
+import type { ReviewResult } from "../review/types.ts";
 
 export interface RunnerDeps {
   db: Database;
@@ -30,6 +32,8 @@ export interface RunnerDeps {
   destroySandboxFn?: (sessionId: string) => Promise<void>;
   /** Override full session execution for testing. Replaces adapter+fallback flow. */
   executeSessionFn?: (task: Task, sandbox: SandboxHandle) => Promise<AgentOutput>;
+  /** Override for testing. Replaces the entire code review step. */
+  runReviewFn?: (task: Task, sandbox: SandboxHandle) => Promise<ReviewResult | null>;
 }
 
 /** Session tracking for monitoring cancel/activity routing. */
@@ -119,11 +123,22 @@ export class SessionRunner {
         ? await this.deps.executeSessionFn(task, sandboxHandle)
         : await this.executeSession(task, sandboxHandle);
 
-      // 4. Update plan with result
-      const finalStatus = output.terminalState === "complete" ? "complete" : "failed";
-      const statusNotes = output.error
+      // 4. Code review (only on coder success)
+      let finalStatus: "complete" | "failed" =
+        output.terminalState === "complete" ? "complete" : "failed";
+      let statusNotes = output.error
         ? `Session error: ${output.error}`
         : undefined;
+
+      if (finalStatus === "complete" && sandboxHandle) {
+        const review = await this.reviewChanges(task, sandboxHandle);
+        if (review?.verdict === "REQUEST_CHANGES") {
+          finalStatus = "failed";
+          statusNotes = `Code review rejected: ${review.summary}`;
+        }
+      }
+
+      // 5. Update plan with result
       await updateTaskStatus(
         this.deps.planPath,
         task.id,
@@ -131,13 +146,13 @@ export class SessionRunner {
         statusNotes,
       );
 
-      // 5. Send notification
+      // 6. Send notification
       const costStr = `$${output.costUsd.toFixed(4)}`;
       await this.deps.sendAlert(
         `Task ${task.id} (${task.title}) \u2192 ${finalStatus}. Cost: ${costStr}`,
       );
 
-      // 6. Log cost summary
+      // 7. Log cost summary
       console.log(
         `[runner] task ${task.id} ${finalStatus} | cost: ${costStr} | tokens: ${output.usage.inputTokens}in/${output.usage.outputTokens}out`,
       );
@@ -168,6 +183,49 @@ export class SessionRunner {
         }
       }
     }
+  }
+
+  /** Run code review on workspace changes. Returns null on failure (soft pass). */
+  private async reviewChanges(
+    task: Task,
+    sandbox: SandboxHandle,
+  ): Promise<ReviewResult | null> {
+    try {
+      if (this.deps.runReviewFn) {
+        return await this.deps.runReviewFn(task, sandbox);
+      }
+
+      const diff = await this.getWorkspaceDiff(sandbox);
+      if (!diff.trim()) return null;
+
+      const repoDir = dirname(this.deps.planPath);
+      return await runCodeReview(
+        {
+          db: this.deps.db,
+          anthropicApiKey: this.deps.anthropicApiKey,
+          sendAlert: this.deps.sendAlert,
+        },
+        resolve(repoDir, "agents/reviewer/system_prompt.md"),
+        sandbox.workDir,
+        task.id,
+        diff,
+      );
+    } catch {
+      // Review failure is a soft pass — don't block the task
+      return null;
+    }
+  }
+
+  /** Get all changes in the workspace relative to the initial clone state. */
+  private async getWorkspaceDiff(sandbox: SandboxHandle): Promise<string> {
+    const proc = Bun.spawn(["git", "diff", `origin/${this.deps.branch}`], {
+      cwd: sandbox.workDir,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const text = await new Response(proc.stdout).text();
+    await proc.exited;
+    return text;
   }
 
   /** Full session execution: adapter creation, monitoring, tier-based routing. */

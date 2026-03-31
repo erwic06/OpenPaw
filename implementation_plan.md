@@ -279,7 +279,7 @@
 ---
 
 ### 3.10 -- Code Review (Claude Reviewer)
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/3.10-code-review.md
 - **Dependencies:** 3.6
@@ -288,6 +288,11 @@
 - **Acceptance:** Claude Reviewer session reviews git diff, returns structured findings; tests pass
 
 #### Notes
+- ReviewDeps with ReviewExecutor DI for testable session execution; no new packages
+- parseReviewResult handles bare JSON, code-fenced JSON, validates verdict/findings/severity
+- Runner integration: review after successful coder session, REQUEST_CHANGES → failed, crash → soft pass
+- Reviewer uses Sonnet at $0.50 budget cap; workspace diff via git diff origin/branch
+- 25 new tests (13 parseReviewResult + 6 runCodeReview + 1 buildReviewPrompt + 5 runner integration), 182 total passing
 #### Failure History
 
 ---
@@ -341,3 +346,4 @@
 | 15      | 2026-03-29 | 3.8  | complete | —      | Session monitoring: SessionMonitor class tracks active sessions, detects 10min inactivity, cancels hung sessions, updates SQLite to FAILED, sends Telegram alert. DI with fake time for testing. No new packages. 17 new tests, 146 total. |
 | 16      | 2026-03-30 | 3.9  | complete | —      | Session runner + orchestrator wiring: SessionRunner with sequential dispatch, plan writer, index.ts wired with all subsystems (db, Telegram, gates, runner, plan watcher, SIGTERM). waitForCompletion on adapters, getLastActivityMs on monitor. No new packages. 26 new tests, 172 total. |
 | 17      | 2026-03-30 | 3.4/3.6/3.7 | complete | —  | Lean integration overhaul: removed Daytona SDK (243 packages) and openai package, replaced with local workspaces (git clone /repo) and CodexAdapter (@openai/codex-sdk 0.117.0). LLMAdapter uses cwd instead of mcpServers. Tier-based routing: heavy/standard → Claude Code, light → Codex, cross-provider fallback. Deleted openai-adapter.ts, daytona-tools.ts, tools/index.ts. Updated system prompt, Docker config, pricing. 156 tests passing. |
+| 18      | 2026-03-31 | 3.10 | complete | —  | Code review module: ReviewResult/ReviewFinding types, runCodeReview with ReviewExecutor DI, parseReviewResult (bare/fenced JSON), adversarial reviewer system prompt, runner integration (REQUEST_CHANGES → failed, crash → soft pass). No new packages. 25 new tests, 182 total. |
