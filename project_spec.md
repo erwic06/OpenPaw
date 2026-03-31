@@ -14,7 +14,7 @@ OpenPaw is a personal agent fleet management system. It orchestrates coding, res
 - Accept task intake via Telegram bot (/research, /deep-research, /project, /coding) and web dashboard
 - Support custom scheduled agents defined as markdown files with cron or event-based triggers
 - Track costs per session and enforce daily budget limits
-- Execute headless coding sessions in sandboxed environments (Daytona) with automated code review (Cubic)
+- Execute headless coding sessions in local workspaces (git clone) with automated code review (Claude Reviewer)
 
 ## Non-Goals
 
@@ -31,7 +31,7 @@ OpenPaw is a personal agent fleet management system. It orchestrates coding, res
 - **Runtime:** Node.js / Bun for NanoClaw
 - **Persistence:** SQLite for operational metadata, Git repo for all artifacts
 - **Auth:** Cloudflare Access (GitHub OAuth + MFA) for web dashboard; single authorized user
-- **Code execution:** Remote via Daytona (never on the Mac Mini for headless sessions)
+- **Code execution:** Local workspaces (git clone from mounted repo) inside the NanoClaw Docker container
 - **Frontend:** Next.js on Vercel, 21st.dev components, dark theme with amber/gold accent
 - **Supply chain security:** Exact version pins, committed lock files, `--ignore-scripts` in all installs, Docker Compose secrets (not env vars), non-root container user. See design doc Section 2.
 
@@ -51,7 +51,7 @@ Phase exit criteria from the design document:
 ## Technical Context
 
 - Full design document: `openpaw-design-document.md`
-- Architecture: NanoClaw daemon (Docker) + Claude Code (host) + Daytona (remote sandbox)
+- Architecture: NanoClaw daemon (Docker) + Claude Code / Codex (headless agents) + local workspaces
 - Two state stores: Git repo (source of truth) + SQLite (operational metadata)
 - Agent types: Planner, Coder, Researcher, Reviewer, Custom (LLM-native or external service)
 - Agent abstraction: uniform AgentAdapter interface with LLMAdapter and ServiceAdapter implementations
@@ -65,3 +65,4 @@ Phase exit criteria from the design document:
 | 2026-03-06 | Initial specification created   | Eric   |
 | 2026-03-24 | Add uniform agent interface (LLM + external service adapters), promote external communication gate to first-class feature, add content review dashboard tab | Eric |
 | 2026-03-24 | BrowserUse CLI 2 as general-purpose dual-mode browser tool for all agents | Eric |
+| 2026-03-31 | Replace Daytona/Cubic with local workspaces and Claude Reviewer (lean overhaul) | Eric |
