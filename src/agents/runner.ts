@@ -27,7 +27,7 @@ export interface RunnerDeps {
   /** Override for testing. */
   createSandboxFn?: (deps: SandboxDeps, config: SandboxConfig) => Promise<SandboxHandle>;
   /** Override for testing. */
-  destroySandboxFn?: (deps: SandboxDeps, sessionId: string) => Promise<void>;
+  destroySandboxFn?: (sessionId: string) => Promise<void>;
   /** Override full session execution for testing. Replaces adapter+fallback flow. */
   executeSessionFn?: (task: Task, sandbox: SandboxHandle) => Promise<AgentOutput>;
 }
@@ -162,7 +162,7 @@ export class SessionRunner {
       if (sandboxHandle) {
         const destroyFn = this.deps.destroySandboxFn ?? realDestroySandbox;
         try {
-          await destroyFn(this.deps.sandboxDeps, sandboxId);
+          await destroyFn(sandboxId);
         } catch (err) {
           console.error(`[runner] sandbox cleanup failed: ${err}`);
         }

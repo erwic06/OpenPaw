@@ -37,6 +37,10 @@ export async function createSandbox(
   }
 
   const workDir = join(deps.baseDir, config.sessionId);
+  // Clean up orphan dir from a previous crash (in-memory map is empty after restart)
+  if (existsSync(workDir)) {
+    rmSync(workDir, { recursive: true, force: true });
+  }
   mkdirSync(workDir, { recursive: true });
 
   // Clone from local repo mount (instant, no network/auth needed)
@@ -79,7 +83,6 @@ export function getSandbox(sessionId: string): SandboxHandle | undefined {
  * No-op if the session has no active sandbox.
  */
 export async function destroySandbox(
-  _deps: SandboxDeps,
   sessionId: string,
 ): Promise<void> {
   const handle = activeSandboxes.get(sessionId);

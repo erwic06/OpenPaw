@@ -90,6 +90,17 @@ describe("createSandbox", () => {
     expect(existsSync(join(handle.workDir, "dev-file.txt"))).toBe(true);
   });
 
+  it("cleans up orphan directory from a previous crash", async () => {
+    // Simulate a crash: workDir exists on disk but not in the in-memory map
+    const workDir = join(testBaseDir, "s1");
+    mkdirSync(workDir, { recursive: true });
+    writeFileSync(join(workDir, "stale-file.txt"), "leftover");
+
+    const handle = await createSandbox(makeDeps(), makeConfig("s1"));
+    expect(existsSync(join(handle.workDir, "README.md"))).toBe(true);
+    expect(existsSync(join(handle.workDir, "stale-file.txt"))).toBe(false);
+  });
+
   it("throws on clone failure and cleans up", async () => {
     const config = makeConfig("s1");
     config.branch = "nonexistent-branch";
@@ -115,7 +126,7 @@ describe("getSandbox", () => {
 
   it("returns undefined after sandbox is destroyed", async () => {
     await createSandbox(makeDeps(), makeConfig("s1"));
-    await destroySandbox(makeDeps(), "s1");
+    await destroySandbox("s1");
     expect(getSandbox("s1")).toBeUndefined();
   });
 });
@@ -123,19 +134,19 @@ describe("getSandbox", () => {
 describe("destroySandbox", () => {
   it("removes directory and clears from map", async () => {
     const handle = await createSandbox(makeDeps(), makeConfig("s1"));
-    await destroySandbox(makeDeps(), "s1");
+    await destroySandbox("s1");
     expect(existsSync(handle.workDir)).toBe(false);
     expect(getSandbox("s1")).toBeUndefined();
   });
 
   it("is a no-op for unknown session", async () => {
-    await destroySandbox(makeDeps(), "nonexistent");
+    await destroySandbox("nonexistent");
     // No throw
   });
 
   it("allows re-creating sandbox after destroy", async () => {
     await createSandbox(makeDeps(), makeConfig("s1"));
-    await destroySandbox(makeDeps(), "s1");
+    await destroySandbox("s1");
     const handle = await createSandbox(makeDeps(), makeConfig("s1"));
     expect(handle.sessionId).toBe("s1");
     expect(existsSync(handle.workDir)).toBe(true);
@@ -144,7 +155,7 @@ describe("destroySandbox", () => {
   it("only destroys the specified session", async () => {
     const h1 = await createSandbox(makeDeps(), makeConfig("s1"));
     const h2 = await createSandbox(makeDeps(), makeConfig("s2"));
-    await destroySandbox(makeDeps(), "s1");
+    await destroySandbox("s1");
     expect(existsSync(h1.workDir)).toBe(false);
     expect(existsSync(h2.workDir)).toBe(true);
     expect(getSandbox("s2")).toBeDefined();

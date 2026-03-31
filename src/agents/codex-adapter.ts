@@ -1,11 +1,11 @@
 import type { Database } from "bun:sqlite";
-import type {
-  Codex,
-  Thread,
-  ThreadEvent,
-  TurnCompletedEvent,
-  TurnFailedEvent,
-  ThreadOptions,
+import {
+  Codex as RealCodex,
+  type Thread,
+  type ThreadEvent,
+  type TurnCompletedEvent,
+  type TurnFailedEvent,
+  type ThreadOptions,
 } from "@openai/codex-sdk";
 import type { AgentAdapter, AgentInput, AgentOutput, AgentStatus } from "./types.ts";
 import { logUsage, getSessionCost } from "../costs/index.ts";
@@ -193,10 +193,6 @@ export class CodexAdapter implements AgentAdapter {
 
       if (opts.controller.signal.aborted) return;
 
-      if (state.status === "running") {
-        state.status = "complete";
-      }
-
       updateSession(this.deps.db, sessionId, {
         ended_at: new Date().toISOString(),
         terminal_state: state.status === "complete" ? "complete" : "failed",
@@ -269,7 +265,6 @@ export class CodexAdapter implements AgentAdapter {
     if (this.deps.codexFactory) {
       return this.deps.codexFactory(this.deps.openaiApiKey);
     }
-    const { Codex } = require("@openai/codex-sdk");
-    return new Codex({ apiKey: this.deps.openaiApiKey });
+    return new RealCodex({ apiKey: this.deps.openaiApiKey });
   }
 }

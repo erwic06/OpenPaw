@@ -56,6 +56,9 @@ if (telegramToken && telegramChatId) {
 // --- Session Runner ---
 const anthropicApiKey = secrets.get("anthropic_api_key");
 const openaiApiKey = secrets.get("openai_api_key") ?? "";
+if (!openaiApiKey) {
+  console.warn("[nanoclaw] openai_api_key missing — Codex adapter will fail, Claude fallback only");
+}
 
 if (anthropicApiKey) {
   const runner = new SessionRunner({
