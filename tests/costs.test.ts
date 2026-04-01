@@ -32,6 +32,8 @@ describe("PRICING", () => {
       "claude-haiku-4-5",
       "gpt-5.4",
       "gpt-5.4-mini",
+      "gemini-3.1-pro-preview",
+      "gemini-3.1-flash-lite-preview",
     ];
     for (const m of models) {
       expect(PRICING[m]).toBeDefined();
@@ -60,6 +62,18 @@ describe("logUsage", () => {
     // 1000 input * 5.00 + 500 output * 25.00 = 5000 + 12500 = 17500 / 1M = 0.0175
     const cost = logUsage(deps, "s1", "claude-opus-4-6", "anthropic", 1000, 500);
     expect(cost).toBeCloseTo(0.0175, 6);
+  });
+
+  it("calculates cost correctly for gemini-3.1-pro-preview", () => {
+    // 1000 input * 2.00 + 500 output * 12.00 = 2000 + 6000 = 8000 / 1M = 0.008
+    const cost = logUsage(deps, "s1", "gemini-3.1-pro-preview", "google", 1000, 500);
+    expect(cost).toBeCloseTo(0.008, 6);
+  });
+
+  it("calculates cost correctly for gemini-3.1-flash-lite-preview", () => {
+    // 10000 input * 0.25 + 5000 output * 1.50 = 2500 + 7500 = 10000 / 1M = 0.01
+    const cost = logUsage(deps, "s1", "gemini-3.1-flash-lite-preview", "google", 10000, 5000);
+    expect(cost).toBeCloseTo(0.01, 6);
   });
 
   it("calculates cost correctly for gpt-5.4-mini", () => {

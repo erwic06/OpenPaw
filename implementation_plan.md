@@ -337,7 +337,7 @@
 ---
 
 ### 4.1 -- Expand Model Roster and Provider Types
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/4.1-model-roster-expansion.md
 - **Dependencies:** none
@@ -346,6 +346,11 @@
 - **Acceptance:** "research" ModelTier, "google" Provider, Gemini pricing in PRICING table; tests pass
 
 #### Notes
+- Added "research" to ModelTier, "google" to Provider
+- Gemini 3.1 Pro Preview: $2.00/$12.00 per 1M tokens (input/output)
+- Gemini 3.1 Flash Lite Preview: $0.25/$1.50 per 1M tokens
+- Research roster: gemini-3.1-pro-preview primary, claude-sonnet-4-6 fallback
+- 2 new tests (Gemini cost calculations), 216 total passing
 #### Failure History
 
 ---
@@ -473,3 +478,4 @@
 | 19      | 2026-03-31 | 3.11 | complete | —  | Deploy gate wiring: parser extended with deploy tag, runner calls requestApproval for deploy-tagged tasks, assembleDeployContext with diff/review/session summary. Approved → complete, denied/timeout → blocked. No new packages. 18 new tests, 200 total. |
 | 20      | 2026-03-31 | 3.12 | complete | —  | Restart recovery: getOrphanedSessions DB query, recoverOrphanedSessions resets tasks to ready and marks sessions FAILED. Wired in index.ts before plan watcher. Fixed fragile parser test. No new packages. 14 new tests, 214 total. |
 | 21      | 2026-03-31 | —    | complete | —  | Phase 4 scaffolding: wrote 8 contracts (4.1-4.8), added Phase 4 task entries to implementation plan, updated current phase. Fixed stale OpenAIAdapter refs in 3.7 contract. Updated project_spec.md (Daytona/Cubic → local workspaces/Claude Reviewer). 214 tests passing. |
+| 22      | 2026-03-31 | 4.1  | complete | —  | Model roster expansion: "research" ModelTier, "google" Provider, Gemini 3.1 Pro/Flash Lite pricing. Research roster: Gemini primary, Sonnet fallback. 2 new tests, 216 total. |

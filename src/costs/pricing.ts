@@ -18,4 +18,9 @@ export const PRICING: Record<string, TokenPricing> = {
   // --- OpenAI (Codex) ---
   "gpt-5.4":      { input: 2.50,  output: 15.00 },
   "gpt-5.4-mini": { input: 0.75,  output: 4.50  },
+
+  // --- Google (Gemini) ---
+  // https://ai.google.dev/gemini-api/docs/pricing
+  "gemini-3.1-pro-preview":        { input: 2.00,  output: 12.00 },
+  "gemini-3.1-flash-lite-preview": { input: 0.25,  output: 1.50  },
 };

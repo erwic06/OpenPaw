@@ -4,9 +4,9 @@ export type AgentStatus = "running" | "complete" | "failed" | "waiting_hitl";
 
 // --- Model configuration ---
 
-export type ModelTier = "heavy" | "standard" | "light";
+export type ModelTier = "heavy" | "standard" | "light" | "research";
 
-export type Provider = "anthropic" | "openai";
+export type Provider = "anthropic" | "openai" | "google";
 
 export interface ModelConfig {
   primary: { model: string; provider: Provider };
@@ -27,6 +27,10 @@ export const DEFAULT_ROSTER: ModelRoster = {
   light: {
     primary: { model: "gpt-5.4-mini", provider: "openai" },
     fallback: { model: "claude-haiku-4-5", provider: "anthropic" },
+  },
+  research: {
+    primary: { model: "gemini-3.1-pro-preview", provider: "google" },
+    fallback: { model: "claude-sonnet-4-6", provider: "anthropic" },
   },
 };
 
