@@ -532,7 +532,7 @@
 ---
 
 ### 5.3 -- Stuck Task Detection
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/5.3-stuck-task-detection.md
 - **Dependencies:** 5.1
@@ -541,6 +541,11 @@
 - **Acceptance:** 3+ failures pauses dispatch for task, sends stuck_task alert; tests pass
 
 #### Notes
+- getTaskFailureCount queries sessions table for both 'failed' and 'FAILED' terminal states
+- SessionRunner.stuckTasks Set tracks tasks at 3+ failures; resets on construction (intentional restart behavior)
+- drainQueue skips stuck tasks with log message; non-stuck tasks dispatch normally
+- stuck_task alert via optional alertSystem field on RunnerDeps (null-safe)
+- No new packages; 12 new tests, 348 total passing
 #### Failure History
 
 ---
@@ -622,3 +627,4 @@
 | 29      | 2026-04-02 | —    | complete | —  | Phase 5 scaffolding: wrote 6 contracts (5.1-5.6), added Phase 5 task entries to implementation plan, updated current phase. Fixed fragile parser test (hardcoded task count → invariant-based). 306 tests passing. |
 | 30      | 2026-04-02 | 5.1  | complete | —  | Structured alert system: AlertType union (7 types), AlertPayload discriminated union, formatAlertMessage (HTML with emoji/bold/footer), AlertSystem class with dedicated alertsChatId + fallbackChatId routing. No new packages. 14 new tests, 320 total. |
 | 31      | 2026-04-02 | 5.2  | complete | —  | Budget controls: BudgetEnforcer with checkBudget/enforceBudget, warn-once at 80%, hard stop at 100% with spend gate. Integrated into SessionRunner.drainQueue and ResearchRunner.runResearch as optional field. No new packages. 16 new tests, 336 total. |
+| 32      | 2026-04-02 | 5.3  | complete | —  | Stuck task detection: getTaskFailureCount DB query, stuckTasks Set in SessionRunner, drainQueue skip with log, stuck_task alert via optional alertSystem. No new packages. 12 new tests, 348 total. |

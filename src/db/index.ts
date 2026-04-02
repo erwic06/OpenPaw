@@ -50,6 +50,16 @@ export function getSessionsByStatus(db: Database, status: string): Session[] {
   return db.prepare("SELECT * FROM sessions WHERE terminal_state = ?").all(status) as Session[];
 }
 
+export function getTaskFailureCount(db: Database, taskId: string): number {
+  const result = db
+    .prepare(
+      `SELECT COUNT(*) as count FROM sessions
+       WHERE task_id = ? AND terminal_state IN ('failed', 'FAILED')`,
+    )
+    .get(taskId) as { count: number };
+  return result.count;
+}
+
 export function getOrphanedSessions(db: Database): Session[] {
   return db
     .prepare("SELECT * FROM sessions WHERE ended_at IS NULL")

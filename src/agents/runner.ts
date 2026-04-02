@@ -18,6 +18,10 @@ import type { ReviewResult } from "../review/types.ts";
 import { requestApproval as realRequestApproval } from "../gates/index.ts";
 import type { GateRequest, GateResult } from "../gates/types.ts";
 import type { BudgetEnforcer } from "../budget/index.ts";
+import { getTaskFailureCount } from "../db/index.ts";
+import type { AlertSystem } from "../alerts/index.ts";
+
+const STUCK_TASK_THRESHOLD = 3;
 
 export interface RunnerDeps {
   db: Database;
@@ -41,6 +45,8 @@ export interface RunnerDeps {
   requestApprovalFn?: (request: GateRequest) => Promise<GateResult>;
   /** Optional budget enforcement. When set, drainQueue checks before each dispatch. */
   budgetEnforcer?: BudgetEnforcer;
+  /** Optional alert system for structured alerts (stuck task detection). */
+  alertSystem?: AlertSystem;
 }
 
 /** Session tracking for monitoring cancel/activity routing. */
@@ -101,6 +107,7 @@ export class SessionRunner {
   private queue: Task[] = [];
   private monitor: SessionMonitor;
   private activeSessions = new Map<string, ActiveSession>();
+  private stuckTasks = new Set<string>();
 
   constructor(deps: RunnerDeps) {
     this.deps = deps;
@@ -151,6 +158,11 @@ export class SessionRunner {
       }
       this.busy = true;
       const task = this.queue.shift()!;
+      if (this.stuckTasks.has(task.id)) {
+        console.log(`[runner] skipping stuck task ${task.id} (3+ failures)`);
+        this.busy = false;
+        continue;
+      }
       try {
         await this.runTask(task);
       } catch (err) {
@@ -221,13 +233,30 @@ export class SessionRunner {
         statusNotes,
       );
 
-      // 6. Send notification
+      // 6. Stuck task detection
+      if (finalStatus === "failed") {
+        const failCount = getTaskFailureCount(this.deps.db, task.id);
+        if (failCount >= STUCK_TASK_THRESHOLD) {
+          this.stuckTasks.add(task.id);
+          if (this.deps.alertSystem) {
+            await this.deps.alertSystem.send({
+              type: "stuck_task",
+              taskId: task.id,
+              taskTitle: task.title,
+              failureCount: failCount,
+              lastError: statusNotes ?? "unknown",
+            });
+          }
+        }
+      }
+
+      // 7. Send notification
       const costStr = `$${output.costUsd.toFixed(4)}`;
       await this.deps.sendAlert(
         `Task ${task.id} (${task.title}) \u2192 ${finalStatus}. Cost: ${costStr}`,
       );
 
-      // 7. Log cost summary
+      // 8. Log cost summary
       console.log(
         `[runner] task ${task.id} ${finalStatus} | cost: ${costStr} | tokens: ${output.usage.inputTokens}in/${output.usage.outputTokens}out`,
       );
