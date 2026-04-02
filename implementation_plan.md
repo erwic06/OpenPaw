@@ -963,7 +963,7 @@
 ---
 
 ### 8.3 -- Agent Definition Loader and File Watcher
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/8.3-agent-definition-loader.md
 - **Dependencies:** 8.1, 8.2
@@ -972,6 +972,11 @@
 - **Acceptance:** Directory scan, DB sync, fs.watch with debounce and polling fallback; tests pass
 
 #### Notes
+- loadAllAgentDefinitions: scans agents/*/agent.md, logs and skips parse errors
+- syncDefinitionsToDb: upsert new/changed definitions, soft-disable removed ones, re-enable returning ones
+- watchAgentDefinitions: fs.watch with recursive + 500ms debounce, polling fallback at 5min
+- next_run_at left null (computed by cron scheduler in 8.5)
+- 14 tests, 566 total passing
 #### Failure History
 
 ---
@@ -996,7 +1001,7 @@
 ---
 
 ### 8.5 -- Cron Scheduler
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/8.5-cron-scheduler.md
 - **Dependencies:** 8.1, 8.3
