@@ -977,7 +977,7 @@
 ---
 
 ### 8.4 -- ServiceAdapter
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/8.4-service-adapter.md
 - **Dependencies:** 8.1
@@ -986,6 +986,11 @@
 - **Acceptance:** AgentAdapter implementation for external HTTP services with DI fetchFn; tests pass
 
 #### Notes
+- ServiceAdapter implements AgentAdapter: trigger (POST), status (GET), output (GET), cancel (DELETE), healthCheck
+- ServiceAdapterError with retryable flag: 5xx=retryable, 4xx=non-retryable, network/timeout=retryable
+- Auth resolves ${SECRET_NAME} from secrets Map, or uses token directly; Bearer prefix auto-added
+- Endpoint template substitution: {session_id} placeholder or append /<id>
+- DI fetchFn for testing; 20 tests, 539 total passing
 #### Failure History
 
 ---

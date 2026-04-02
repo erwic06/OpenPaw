@@ -28,3 +28,6 @@ export type { MonitorDeps } from "./monitor.ts";
 
 export { SessionRunner } from "./runner.ts";
 export type { RunnerDeps } from "./runner.ts";
+
+export { ServiceAdapter, ServiceAdapterError } from "./service-adapter.ts";
+export type { ServiceAdapterDeps, ServiceAdapterConfig } from "./service-adapter.ts";
