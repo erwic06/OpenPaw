@@ -416,7 +416,7 @@
 ---
 
 ### 4.5 -- Research Types and Contract Template
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/4.5-research-types.md
 - **Dependencies:** none
@@ -425,6 +425,11 @@
 - **Acceptance:** ResearchBrief/Section/Source types, DepthConfig map, research contract template; tests pass
 
 #### Notes
+- ResearchBrief/Section/Source types with SourceReliability and confidence levels
+- DEPTH_CONFIGS: 10 levels with increasing token budgets (1.5K–60K), source minimums (1–12), and cost ranges ($0.05–$12)
+- parseResearchBrief: extracts structured data from markdown (sections, confidence, citations, sources)
+- Research contract template at contracts/_research_template.md
+- No new packages; 16 new tests, 265 total passing
 #### Failure History
 
 ---
@@ -500,3 +505,4 @@
 | 23      | 2026-04-01 | 4.2  | complete | —  | Gemini adapter: GeminiAdapter implements AgentAdapter with @google/genai 1.47.0. Streaming via generateContentStream, cumulative token tracking, function calling cycle with toolExecutor DI. No runner modifications. 20 new tests, 236 total. |
 | 24      | 2026-04-01 | 4.3  | complete | —  | BrowserUse Cloud wrapper: browseUrl with API v3 session create/poll, getBrowserUseToolDeclaration for Gemini function calling. Content truncation, error-in-result pattern. No new packages. 13 new tests, 249 total. |
 | 25      | 2026-04-01 | 4.4  | complete | —  | Researcher agent system prompt: anti-sycophancy directives, 3-phase methodology, depth-aware scoping (1–10), citation requirements, adversarial self-check. Content-only task. |
+| 26      | 2026-04-01 | 4.5  | complete | —  | Research types: ResearchBrief/Section/Source, DEPTH_CONFIGS (10 levels), parseResearchBrief parser, research contract template. No new packages. 16 new tests, 265 total. |
