@@ -1,7 +1,7 @@
 # OpenPaw -- Implementation Plan
 
 **Project:** OpenPaw
-**Current Phase:** Phase 7 -- OpenPaw Web (Dashboard & Control Plane)
+**Current Phase:** Phase 8 -- Custom Agents & Fleet Management (complete)
 **Last Updated:** 2026-04-02
 
 ---
@@ -1080,7 +1080,7 @@
 ---
 
 ### 8.9 -- Template Agent Definitions and E2E Verification
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/8.9-template-agents-e2e.md
 - **Dependencies:** 8.8
@@ -1089,6 +1089,11 @@
 - **Acceptance:** 3 template agents parse/load/sync correctly, scheduler timing verified, Docker build succeeds; tests pass
 
 #### Notes
+- TBPN Digest: cron daily 8 PM, Gemini 3.1 Pro, browseruse+web_search, Telegram+GitHub output, $1/run
+- Daily Standup: cron weekdays 9 AM, Claude Sonnet, file_read, Telegram summary, $0.50/run
+- PR Reviewer: on_commit:main event trigger, Claude Sonnet, file_read+shell, GitHub reviews/, $2/run
+- E2E tests verify parser roundtrip, loader→DB sync, cron timing, event config, output validity
+- Docker build succeeds; 11 tests, 628 total passing
 #### Failure History
 
 ---
@@ -1136,3 +1141,4 @@
 | 37      | 2026-04-02 | 7.1-7.10 | complete | — | Phase 7 implementation: API router with URL-pattern matching and CF Access JWT auth. REST endpoints for sessions, gates, costs, projects, communications, tasks. WebSocket pub/sub via NanoClawEvents. CF Tunnel setup script. Next.js 15 frontend with dark amber theme, 6 tabs (overview, research, projects, content-review, automations), typed API/WS clients. All routes wired in index.ts with WS upgrade. Docker build verified. No new backend packages. 77 new backend tests, 456 total. |
 | 36      | 2026-04-02 | —    | complete | —  | Phase 6 scaffolding: wrote 9 contracts (6.1-6.9), added Phase 6 task entries to implementation plan, updated current phase to Phase 6. 379 tests passing. |
 | 38      | 2026-04-02 | 8.1  | complete | —  | Agent definition types and DB schema: AgentDefinition/AgentRun/ScheduleConfig/OutputDestination/AdapterConfig types in src/fleet/types.ts. agent_definitions and agent_runs tables in schema.sql. 13 CRUD functions in db/index.ts. No new packages. 33 new tests, 489 total. |
+| 39      | 2026-04-02 | 8.2-8.9 | complete | — | Phase 8 implementation: Agent definition parser (30 tests), ServiceAdapter with retryable error classification (20 tests), output routing for Telegram/GitHub/webapp (13 tests), definition loader with fs.watch (14 tests), cron evaluator with CronScheduler (29 tests), event trigger system with deduplication (13 tests), FleetOrchestrator wiring all subsystems into NanoClaw (9 tests), 3 template agents with E2E verification (11 tests). Docker build verified. No new packages. 139 new tests, 628 total. |
