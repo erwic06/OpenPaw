@@ -1024,7 +1024,7 @@
 ---
 
 ### 8.7 -- Output Routing Engine
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/8.7-output-routing.md
 - **Dependencies:** 8.1
@@ -1033,6 +1033,11 @@
 - **Acceptance:** Telegram and GitHub routing, Notion stub, per-destination error isolation; tests pass
 
 #### Notes
+- routeOutput iterates destinations with per-destination error isolation
+- Telegram: summary (condensed) and full_report (truncated preview with GitHub pointer)
+- GitHub: write file at path, git add/commit/push with [agent] prefix commit message
+- Webapp: no-op (data served via API from agent_runs tables)
+- DI spawnSyncFn for testing git operations; 13 tests, 552 total passing
 #### Failure History
 
 ---
