@@ -396,7 +396,7 @@
 ---
 
 ### 4.4 -- Researcher Agent System Prompt
-- **Status:** ready
+- **Status:** complete
 - **Type:** content
 - **Contract:** contracts/4.4-researcher-system-prompt.md
 - **Dependencies:** none
@@ -405,6 +405,12 @@
 - **Acceptance:** System prompt with anti-sycophancy focus, research methodology, citation requirements, depth awareness
 
 #### Notes
+- 5-rule anti-sycophancy core directive + 5-step adversarial self-check before finalization
+- 3-phase methodology: broad survey → deep investigation (triangulation, 3-tier source reliability) → synthesis
+- Depth-awareness table (1–10) with source count and scope guidance per level
+- Structured output: executive summary, sections with confidence levels (high/medium/low), open questions, numbered sources
+- Filesystem: research/* read-write only; no access to src/*, secrets, or plan modification
+- Content-only task; no code changes
 #### Failure History
 
 ---
@@ -493,3 +499,4 @@
 | 22      | 2026-03-31 | 4.1  | complete | —  | Model roster expansion: "research" ModelTier, "google" Provider, Gemini 3.1 Pro/Flash Lite pricing. Research roster: Gemini primary, Sonnet fallback. 2 new tests, 216 total. |
 | 23      | 2026-04-01 | 4.2  | complete | —  | Gemini adapter: GeminiAdapter implements AgentAdapter with @google/genai 1.47.0. Streaming via generateContentStream, cumulative token tracking, function calling cycle with toolExecutor DI. No runner modifications. 20 new tests, 236 total. |
 | 24      | 2026-04-01 | 4.3  | complete | —  | BrowserUse Cloud wrapper: browseUrl with API v3 session create/poll, getBrowserUseToolDeclaration for Gemini function calling. Content truncation, error-in-result pattern. No new packages. 13 new tests, 249 total. |
+| 25      | 2026-04-01 | 4.4  | complete | —  | Researcher agent system prompt: anti-sycophancy directives, 3-phase methodology, depth-aware scoping (1–10), citation requirements, adversarial self-check. Content-only task. |
