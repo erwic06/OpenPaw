@@ -376,7 +376,7 @@
 ---
 
 ### 4.3 -- BrowserUse Tool Wrapper
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/4.3-browseruse-wrapper.md
 - **Dependencies:** none
@@ -385,6 +385,12 @@
 - **Acceptance:** Cloud-mode BrowserUse wrapper, structured results, Gemini tool declaration export; tests pass
 
 #### Notes
+- Cloud-only mode using BrowserUse API v3 (POST /sessions, GET /sessions/{id} polling)
+- No new packages — uses built-in fetch; DI via fetchFn for testing
+- Content truncation at maxContentLength (default 10000 chars) to prevent token explosion
+- Errors returned in BrowserUseResult.error (never throws)
+- getBrowserUseToolDeclaration exports Gemini-compatible FunctionDeclaration (browse_url with url + optional action)
+- 13 new tests, 249 total passing
 #### Failure History
 
 ---
@@ -486,3 +492,4 @@
 | 21      | 2026-03-31 | —    | complete | —  | Phase 4 scaffolding: wrote 8 contracts (4.1-4.8), added Phase 4 task entries to implementation plan, updated current phase. Fixed stale OpenAIAdapter refs in 3.7 contract. Updated project_spec.md (Daytona/Cubic → local workspaces/Claude Reviewer). 214 tests passing. |
 | 22      | 2026-03-31 | 4.1  | complete | —  | Model roster expansion: "research" ModelTier, "google" Provider, Gemini 3.1 Pro/Flash Lite pricing. Research roster: Gemini primary, Sonnet fallback. 2 new tests, 216 total. |
 | 23      | 2026-04-01 | 4.2  | complete | —  | Gemini adapter: GeminiAdapter implements AgentAdapter with @google/genai 1.47.0. Streaming via generateContentStream, cumulative token tracking, function calling cycle with toolExecutor DI. No runner modifications. 20 new tests, 236 total. |
+| 24      | 2026-04-01 | 4.3  | complete | —  | BrowserUse Cloud wrapper: browseUrl with API v3 session create/poll, getBrowserUseToolDeclaration for Gemini function calling. Content truncation, error-in-result pattern. No new packages. 13 new tests, 249 total. |
