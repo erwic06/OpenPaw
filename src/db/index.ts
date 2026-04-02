@@ -102,6 +102,53 @@ export function getDailySpend(db: Database, date: string): number {
   return result.total;
 }
 
+// --- Cost Views ---
+
+export function getDailySpendByService(
+  db: Database,
+  date?: string,
+): Array<{ day: string; service: string; total: number }> {
+  if (date) {
+    return db
+      .prepare("SELECT * FROM daily_spend_by_service WHERE day = date(?)")
+      .all(date) as Array<{ day: string; service: string; total: number }>;
+  }
+  return db
+    .prepare("SELECT * FROM daily_spend_by_service ORDER BY day DESC")
+    .all() as Array<{ day: string; service: string; total: number }>;
+}
+
+export function getMonthlySpendByAgent(
+  db: Database,
+): Array<{ agent: string; total: number }> {
+  return db
+    .prepare("SELECT * FROM monthly_spend_by_agent")
+    .all() as Array<{ agent: string; total: number }>;
+}
+
+export function getMostExpensiveSessions(
+  db: Database,
+  limit: number = 10,
+): Array<{
+  id: string;
+  agent: string;
+  task_id: string | null;
+  model: string;
+  started_at: string;
+  total_cost: number;
+}> {
+  return db
+    .prepare("SELECT * FROM most_expensive_sessions LIMIT ?")
+    .all(limit) as Array<{
+    id: string;
+    agent: string;
+    task_id: string | null;
+    model: string;
+    started_at: string;
+    total_cost: number;
+  }>;
+}
+
 // --- Pending Communications ---
 
 export function insertPendingCommunication(db: Database, comm: Omit<PendingCommunication, "decided_at" | "decision" | "edited_content">): void {

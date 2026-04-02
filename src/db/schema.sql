@@ -48,3 +48,22 @@ CREATE TABLE IF NOT EXISTS pending_communications (
     decision TEXT,
     edited_content TEXT
 );
+
+CREATE VIEW IF NOT EXISTS daily_spend_by_service AS
+SELECT date(logged_at) AS day, service, SUM(amount_usd) AS total
+FROM cost_log
+GROUP BY day, service;
+
+CREATE VIEW IF NOT EXISTS monthly_spend_by_agent AS
+SELECT s.agent, SUM(c.amount_usd) AS total
+FROM cost_log c
+JOIN sessions s ON c.session_id = s.id
+WHERE c.logged_at >= date('now', 'start of month')
+GROUP BY s.agent;
+
+CREATE VIEW IF NOT EXISTS most_expensive_sessions AS
+SELECT s.id, s.agent, s.task_id, s.model, s.started_at, SUM(c.amount_usd) AS total_cost
+FROM cost_log c
+JOIN sessions s ON c.session_id = s.id
+GROUP BY s.id
+ORDER BY total_cost DESC;

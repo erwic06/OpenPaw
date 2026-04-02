@@ -572,7 +572,7 @@
 ---
 
 ### 5.5 -- SQL Cost Views
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/5.5-sql-cost-views.md
 - **Dependencies:** none
@@ -581,6 +581,10 @@
 - **Acceptance:** 3 SQL views created during init, TypeScript query wrappers; tests pass
 
 #### Notes
+- Three SQL views: daily_spend_by_service, monthly_spend_by_agent, most_expensive_sessions
+- Views created via CREATE VIEW IF NOT EXISTS in schema.sql; works with existing initDatabase flow
+- TypeScript wrappers: getDailySpendByService (optional date filter), getMonthlySpendByAgent, getMostExpensiveSessions (configurable limit, default 10)
+- No new packages; 12 new tests, 373 total passing
 #### Failure History
 
 ---
@@ -636,3 +640,4 @@
 | 31      | 2026-04-02 | 5.2  | complete | —  | Budget controls: BudgetEnforcer with checkBudget/enforceBudget, warn-once at 80%, hard stop at 100% with spend gate. Integrated into SessionRunner.drainQueue and ResearchRunner.runResearch as optional field. No new packages. 16 new tests, 336 total. |
 | 32      | 2026-04-02 | 5.3  | complete | —  | Stuck task detection: getTaskFailureCount DB query, stuckTasks Set in SessionRunner, drainQueue skip with log, stuck_task alert via optional alertSystem. No new packages. 12 new tests, 348 total. |
 | 33      | 2026-04-02 | 5.4  | complete | —  | Laminar tracing: @lmnr-ai/lmnr 0.8.15, initTracing/traceSession/shutdownTracing with no-op fallback, scrubSecrets sanitization. SessionRunner and ResearchRunner wrapped with trace metadata. 13 new tests, 361 total. |
+| 34      | 2026-04-02 | 5.5  | complete | —  | SQL cost views: daily_spend_by_service, monthly_spend_by_agent, most_expensive_sessions in schema.sql. TypeScript query wrappers in db/index.ts. No new packages. 12 new tests, 373 total. |
