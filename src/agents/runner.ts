@@ -20,6 +20,7 @@ import type { GateRequest, GateResult } from "../gates/types.ts";
 import type { BudgetEnforcer } from "../budget/index.ts";
 import { getTaskFailureCount } from "../db/index.ts";
 import type { AlertSystem } from "../alerts/index.ts";
+import { traceSession, scrubSecrets, getSecretValues } from "../tracing/index.ts";
 
 const STUCK_TASK_THRESHOLD = 3;
 
@@ -426,12 +427,27 @@ export class SessionRunner {
         }
       };
 
-    return executeWithFallback(
-      roster.primary.model,
-      roster.fallback.model,
-      makeExecutor(primaryAdapter),
-      makeExecutor(fallbackAdapter),
-      { sendAlert: this.deps.sendAlert },
+    const metadata: Record<string, string> = {
+      agent: "coder",
+      taskId: task.id,
+      model: roster.primary.model,
+    };
+    const secrets = getSecretValues();
+    for (const key of Object.keys(metadata)) {
+      metadata[key] = scrubSecrets(metadata[key], secrets);
+    }
+
+    return traceSession(
+      `coder-${task.id}`,
+      metadata,
+      () =>
+        executeWithFallback(
+          roster.primary.model,
+          roster.fallback.model,
+          makeExecutor(primaryAdapter),
+          makeExecutor(fallbackAdapter),
+          { sendAlert: this.deps.sendAlert },
+        ),
     );
   }
 }

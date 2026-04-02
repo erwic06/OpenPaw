@@ -21,6 +21,7 @@ import { estimateResearchCost, formatCostEstimate } from "./estimator.ts";
 import type { CostEstimate } from "./estimator.ts";
 import { DEPTH_CONFIGS } from "./types.ts";
 import type { BudgetEnforcer } from "../budget/index.ts";
+import { traceSession, scrubSecrets, getSecretValues } from "../tracing/index.ts";
 
 export interface ResearchRunnerDeps {
   db: Database;
@@ -245,20 +246,37 @@ export class ResearchRunner {
 
     const roster = DEFAULT_ROSTER["research"];
 
+    const metadata: Record<string, string> = {
+      agent: "researcher",
+      taskId: task.id,
+      model: roster.primary.model,
+      depth: String(depth),
+    };
+    const secrets = getSecretValues();
+    for (const key of Object.keys(metadata)) {
+      metadata[key] = scrubSecrets(metadata[key], secrets);
+    }
+
     try {
-      // Primary: Gemini with BrowserUse
-      try {
-        return await this.runGeminiSession(input);
-      } catch (primaryErr) {
-        if (!isRetryableError(primaryErr as Error)) throw primaryErr;
+      return await traceSession(
+        `researcher-${task.id}`,
+        metadata,
+        async () => {
+          // Primary: Gemini with BrowserUse
+          try {
+            return await this.runGeminiSession(input);
+          } catch (primaryErr) {
+            if (!isRetryableError(primaryErr as Error)) throw primaryErr;
 
-        await this.deps.sendAlert(
-          `Research fallback: ${roster.primary.model} \u2192 ${roster.fallback.model}`,
-        );
+            await this.deps.sendAlert(
+              `Research fallback: ${roster.primary.model} \u2192 ${roster.fallback.model}`,
+            );
 
-        // Fallback: Claude Sonnet via Agent SDK (no BrowserUse)
-        return await this.runClaudeFallbackSession(task.id, researchPrompt);
-      }
+            // Fallback: Claude Sonnet via Agent SDK (no BrowserUse)
+            return await this.runClaudeFallbackSession(task.id, researchPrompt);
+          }
+        },
+      );
     } finally {
       try {
         unlinkSync(tmpPromptPath);

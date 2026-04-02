@@ -551,7 +551,7 @@
 ---
 
 ### 5.4 -- Laminar Tracing Integration
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/5.4-laminar-tracing.md
 - **Dependencies:** none
@@ -560,6 +560,13 @@
 - **Acceptance:** Laminar SDK wraps session execution, secret sanitization, graceful no-op without key; tests pass
 
 #### Notes
+- @lmnr-ai/lmnr 0.8.15 (118 transitive packages — heavy due to OpenTelemetry + instrumentations); 0 audit vulnerabilities
+- initTracing/traceSession/shutdownTracing with no-op fallback when laminar_api_key absent
+- scrubSecrets replaces secret values >= 4 chars with [REDACTED]
+- SessionRunner.executeSession wrapped in traceSession with coder metadata
+- ResearchRunner.executeDefaultResearch wrapped in traceSession with researcher metadata
+- Dynamic import via require() for resilient no-op when SDK missing; tracing errors caught, never propagated
+- 13 new tests, 361 total passing
 #### Failure History
 
 ---
@@ -628,3 +635,4 @@
 | 30      | 2026-04-02 | 5.1  | complete | —  | Structured alert system: AlertType union (7 types), AlertPayload discriminated union, formatAlertMessage (HTML with emoji/bold/footer), AlertSystem class with dedicated alertsChatId + fallbackChatId routing. No new packages. 14 new tests, 320 total. |
 | 31      | 2026-04-02 | 5.2  | complete | —  | Budget controls: BudgetEnforcer with checkBudget/enforceBudget, warn-once at 80%, hard stop at 100% with spend gate. Integrated into SessionRunner.drainQueue and ResearchRunner.runResearch as optional field. No new packages. 16 new tests, 336 total. |
 | 32      | 2026-04-02 | 5.3  | complete | —  | Stuck task detection: getTaskFailureCount DB query, stuckTasks Set in SessionRunner, drainQueue skip with log, stuck_task alert via optional alertSystem. No new packages. 12 new tests, 348 total. |
+| 33      | 2026-04-02 | 5.4  | complete | —  | Laminar tracing: @lmnr-ai/lmnr 0.8.15, initTracing/traceSession/shutdownTracing with no-op fallback, scrubSecrets sanitization. SessionRunner and ResearchRunner wrapped with trace metadata. 13 new tests, 361 total. |
