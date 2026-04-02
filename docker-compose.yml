@@ -19,6 +19,8 @@ services:
       - telegram_chat_id
       - gemini_api_key
       - browseruse_cloud_api_key
+      - laminar_api_key
+      - alerts_chat_id
     ports:
       - "9999:9999"
 
@@ -35,6 +37,10 @@ secrets:
     file: ~/.nanoclaw/secrets/gemini_api_key
   browseruse_cloud_api_key:
     file: ~/.nanoclaw/secrets/browseruse_cloud_api_key
+  laminar_api_key:
+    file: ~/.nanoclaw/secrets/laminar_api_key
+  alerts_chat_id:
+    file: ~/.nanoclaw/secrets/alerts_chat_id
 
 volumes:
   nanoclaw-data:

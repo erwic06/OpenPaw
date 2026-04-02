@@ -1,10 +1,18 @@
 import type { Database } from "bun:sqlite";
+import { appendFileSync } from "fs";
+import { createHash } from "crypto";
 import type { GateRequest, GateResult } from "./types.ts";
 import { GATE_TYPES, GATE_CONFIGS } from "./types.ts";
 import { formatGateMessage } from "./formatter.ts";
 import { insertGate, updateGate, getPendingGates as dbGetPendingGates } from "../db/index.ts";
 import type { HitlGate } from "../db/types.ts";
 import type { SendMessageOptions, MessageHandler } from "../messaging/index.ts";
+
+let decisionLogPath = "/data/decisions.jsonl";
+
+export function setDecisionLogPath(path: string): void {
+  decisionLogPath = path;
+}
 
 // --- Dependency injection for testability ---
 
@@ -120,6 +128,42 @@ export async function requestApproval(request: GateRequest): Promise<GateResult>
   return resultPromise;
 }
 
+function logDecision(
+  db: Database,
+  gateId: string,
+  decision: string,
+  decidedAt: string,
+): void {
+  try {
+    const gate = db
+      .prepare("SELECT gate_type, task_id, session_id, context_summary FROM hitl_gates WHERE id = ?")
+      .get(gateId) as {
+      gate_type: string;
+      task_id: string | null;
+      session_id: string | null;
+      context_summary: string | null;
+    } | null;
+
+    if (!gate) return;
+
+    const entry = {
+      id: gateId,
+      gate_type: gate.gate_type,
+      task_id: gate.task_id,
+      session_id: gate.session_id,
+      decision,
+      decided_at: decidedAt,
+      context_summary_hash: gate.context_summary
+        ? createHash("sha256").update(gate.context_summary).digest("hex")
+        : null,
+    };
+
+    appendFileSync(decisionLogPath, JSON.stringify(entry) + "\n");
+  } catch (err) {
+    console.error("[gates] decision logging failed:", err);
+  }
+}
+
 function resolveGate(gateId: string, decision: "approved" | "denied" | "timeout"): void {
   const pending = pendingGates.get(gateId);
   if (!pending) return;
@@ -129,7 +173,10 @@ function resolveGate(gateId: string, decision: "approved" | "denied" | "timeout"
 
   const decidedAt = new Date().toISOString();
 
-  if (deps) updateGate(deps.db, gateId, decision);
+  if (deps) {
+    updateGate(deps.db, gateId, decision);
+    logDecision(deps.db, gateId, decision, decidedAt);
+  }
 
   pending.resolve({
     gateId,

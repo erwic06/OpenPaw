@@ -590,7 +590,7 @@
 ---
 
 ### 5.6 -- Docker Wiring, Decision Logging, and Failure Mode Verification
-- **Status:** ready
+- **Status:** complete
 - **Type:** infrastructure
 - **Contract:** contracts/5.6-docker-wiring-verification.md
 - **Dependencies:** 5.1, 5.2, 5.3, 5.4, 5.5
@@ -599,6 +599,14 @@
 - **Acceptance:** All Phase 5 modules wired in index.ts, decision logging in gates, new Docker secrets, Docker build succeeds; tests pass
 
 #### Notes
+- laminar_api_key and alerts_chat_id added to docker-compose.yml secrets
+- AlertSystem constructed with alertsChatId fallback, BudgetEnforcer with $50/day default, initTracing with secret scrubbing
+- budgetEnforcer passed to SessionRunner and ResearchRunner; alertSystem passed to SessionRunner
+- shutdownTracing called in both SIGTERM handler branches
+- Decision logging: JSONL append in resolveGate with SHA-256 context hash; best-effort (catches errors)
+- setDecisionLogPath export for testing; default /data/decisions.jsonl
+- Graceful degradation verified: works without laminar_api_key, works without alerts_chat_id
+- Docker build verified; no new packages; 6 new tests, 379 total passing
 #### Failure History
 
 ---
@@ -641,3 +649,4 @@
 | 32      | 2026-04-02 | 5.3  | complete | —  | Stuck task detection: getTaskFailureCount DB query, stuckTasks Set in SessionRunner, drainQueue skip with log, stuck_task alert via optional alertSystem. No new packages. 12 new tests, 348 total. |
 | 33      | 2026-04-02 | 5.4  | complete | —  | Laminar tracing: @lmnr-ai/lmnr 0.8.15, initTracing/traceSession/shutdownTracing with no-op fallback, scrubSecrets sanitization. SessionRunner and ResearchRunner wrapped with trace metadata. 13 new tests, 361 total. |
 | 34      | 2026-04-02 | 5.5  | complete | —  | SQL cost views: daily_spend_by_service, monthly_spend_by_agent, most_expensive_sessions in schema.sql. TypeScript query wrappers in db/index.ts. No new packages. 12 new tests, 373 total. |
+| 35      | 2026-04-02 | 5.6  | complete | —  | Docker wiring: AlertSystem, BudgetEnforcer, Laminar tracing wired in index.ts. Decision logging JSONL with SHA-256 context hash in resolveGate. laminar_api_key + alerts_chat_id Docker secrets. Docker build verified. 6 new tests, 379 total. |

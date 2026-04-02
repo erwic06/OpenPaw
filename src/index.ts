@@ -11,6 +11,9 @@ import { watchPlan } from "./plan/reader.ts";
 import { SessionRunner } from "./agents/runner.ts";
 import { ResearchRunner } from "./research/runner.ts";
 import { recoverOrphanedSessions } from "./agents/recovery.ts";
+import { AlertSystem } from "./alerts/index.ts";
+import { BudgetEnforcer, DEFAULT_BUDGET_CONFIG } from "./budget/index.ts";
+import { initTracing, shutdownTracing } from "./tracing/index.ts";
 
 const HEALTH_PORT = 9999;
 const REPO_DIR = "/repo";
@@ -57,6 +60,32 @@ if (telegramToken && telegramChatId) {
   };
 }
 
+// --- Alert System ---
+const alertsChatId = secrets.get("alerts_chat_id");
+const alertSystem = new AlertSystem({
+  sendMessage,
+  alertsChatId: alertsChatId ?? undefined,
+  fallbackChatId: telegramChatId ?? "",
+});
+if (alertsChatId) {
+  console.log("[nanoclaw] alerts routed to dedicated channel");
+} else {
+  console.log("[nanoclaw] alerts routed to main chat (no alerts_chat_id)");
+}
+
+// --- Tracing ---
+const laminarApiKey = secrets.get("laminar_api_key");
+const secretValues = new Set(secrets.values());
+initTracing({ laminarApiKey, secretValues });
+
+// --- Budget Enforcer ---
+const budgetEnforcer = new BudgetEnforcer({
+  db,
+  alertSystem,
+  config: DEFAULT_BUDGET_CONFIG,
+});
+console.log(`[nanoclaw] budget enforcer: $${DEFAULT_BUDGET_CONFIG.dailyLimitUsd}/day, ${DEFAULT_BUDGET_CONFIG.warningThresholdPct * 100}% warning`);
+
 // --- Session Runner ---
 const anthropicApiKey = secrets.get("anthropic_api_key");
 const openaiApiKey = secrets.get("openai_api_key") ?? "";
@@ -90,6 +119,7 @@ if (geminiApiKey) {
     planPath: PLAN_PATH,
     systemPromptPath: RESEARCHER_PROMPT_PATH,
     reviewerPromptPath: RESEARCHER_REVIEWER_PROMPT_PATH,
+    budgetEnforcer,
   });
   console.log("[nanoclaw] research runner initialized");
 } else {
@@ -107,6 +137,8 @@ if (anthropicApiKey) {
     planPath: PLAN_PATH,
     systemPromptPath: SYSTEM_PROMPT_PATH,
     sandboxDeps: { baseDir: WORKSPACES_DIR },
+    budgetEnforcer,
+    alertSystem,
   });
 
   // --- Plan Watcher ---
@@ -126,24 +158,24 @@ if (anthropicApiKey) {
   );
 
   // Clean shutdown
-  process.on("SIGTERM", () => {
+  process.on("SIGTERM", async () => {
     console.log("[nanoclaw] SIGTERM received, shutting down...");
     watcher.stop();
     runner.stop();
     researchRunner?.stop();
+    await shutdownTracing();
   });
 } else {
   console.warn(
     "[nanoclaw] missing anthropic API key — headless sessions disabled",
   );
 
-  // Still handle SIGTERM for research runner if it exists
-  if (researchRunner) {
-    process.on("SIGTERM", () => {
-      console.log("[nanoclaw] SIGTERM received, shutting down...");
-      researchRunner?.stop();
-    });
-  }
+  // Still handle SIGTERM for research runner and tracing
+  process.on("SIGTERM", async () => {
+    console.log("[nanoclaw] SIGTERM received, shutting down...");
+    researchRunner?.stop();
+    await shutdownTracing();
+  });
 }
 
 // --- Health endpoint ---
