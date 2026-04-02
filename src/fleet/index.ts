@@ -24,5 +24,8 @@ export type { SchedulerDeps } from "./scheduler.ts";
 export { EventTriggerSystem } from "./events.ts";
 export type { EventTriggerDeps } from "./events.ts";
 
+export { FleetOrchestrator } from "./orchestrator.ts";
+export type { FleetOrchestratorDeps } from "./orchestrator.ts";
+
 export { routeOutput } from "./router.ts";
 export type { RoutingDeps, RoutingResult, SendMessageFn, SpawnSyncFn } from "./router.ts";

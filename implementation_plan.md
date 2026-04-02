@@ -1060,7 +1060,7 @@
 ---
 
 ### 8.8 -- Fleet Orchestrator and NanoClaw Integration
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/8.8-fleet-orchestrator.md
 - **Dependencies:** 8.3, 8.4, 8.5, 8.6, 8.7
@@ -1069,12 +1069,18 @@
 - **Acceptance:** FleetOrchestrator wired in index.ts, triggerAgent lifecycle, Docker build succeeds; tests pass
 
 #### Notes
+- FleetOrchestrator owns loader, scheduler, event system, and file watcher lifecycle
+- triggerAgent: budget check → insert agent_run → select adapter → execute → route output → update run
+- Service agents: health check → trigger → poll status → get output
+- LLM fleet agents deferred (existing adapters handle task-driven LLM sessions)
+- Wired in src/index.ts with SIGTERM cleanup; events via NanoClawEvents
+- Docker build succeeds; 9 tests, 617 total passing
 #### Failure History
 
 ---
 
 ### 8.9 -- Template Agent Definitions and E2E Verification
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/8.9-template-agents-e2e.md
 - **Dependencies:** 8.8

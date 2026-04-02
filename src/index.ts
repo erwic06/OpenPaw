@@ -15,6 +15,7 @@ import { AlertSystem } from "./alerts/index.ts";
 import { BudgetEnforcer, DEFAULT_BUDGET_CONFIG } from "./budget/index.ts";
 import { initTracing, shutdownTracing } from "./tracing/index.ts";
 import { createRouter, validateCfAccess, NanoClawEvents, parseWsPath } from "./api/index.ts";
+import { FleetOrchestrator } from "./fleet/index.ts";
 import type { ApiDeps, AuthDeps } from "./api/index.ts";
 import { allRoutes } from "./api/routes/index.ts";
 
@@ -129,6 +130,24 @@ if (geminiApiKey) {
   console.warn("[nanoclaw] gemini_api_key missing — research pipeline disabled");
 }
 
+// --- Fleet Orchestrator ---
+const AGENTS_DIR = `${REPO_DIR}/agents`;
+
+const fleetSendMessage = async (chatId: string, text: string) => {
+  await sendMessage(chatId, text);
+};
+
+const fleetOrchestrator = new FleetOrchestrator({
+  db,
+  secrets,
+  sendMessage: fleetSendMessage,
+  chatId: telegramChatId ?? "",
+  repoDir: REPO_DIR,
+  agentsDir: AGENTS_DIR,
+  budgetEnforcer,
+});
+fleetOrchestrator.start();
+
 if (anthropicApiKey) {
   const runner = new SessionRunner({
     db,
@@ -166,6 +185,7 @@ if (anthropicApiKey) {
     watcher.stop();
     runner.stop();
     researchRunner?.stop();
+    fleetOrchestrator.stop();
     await shutdownTracing();
   });
 } else {
@@ -173,10 +193,11 @@ if (anthropicApiKey) {
     "[nanoclaw] missing anthropic API key — headless sessions disabled",
   );
 
-  // Still handle SIGTERM for research runner and tracing
+  // Still handle SIGTERM for research runner, fleet, and tracing
   process.on("SIGTERM", async () => {
     console.log("[nanoclaw] SIGTERM received, shutting down...");
     researchRunner?.stop();
+    fleetOrchestrator.stop();
     await shutdownTracing();
   });
 }
