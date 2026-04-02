@@ -454,7 +454,7 @@
 ---
 
 ### 4.7 -- Research Session Runner
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/4.7-research-runner.md
 - **Dependencies:** 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
@@ -463,12 +463,18 @@
 - **Acceptance:** Full research orchestration: cost estimate, Researcher session, Reviewer fact-check, Gate 3 approval; tests pass
 
 #### Notes
+- ResearchRunner: DI-based orchestrator with cost estimation → spend gate → Gemini researcher → fact-check review → research gate lifecycle
+- Cost estimation uses DEPTH_CONFIGS table directly (no Haiku pre-flight call); estimateCostFn DI for future LLM-based estimation
+- Gemini primary with BrowserUse toolExecutor; Claude Sonnet fallback via Agent SDK (no BrowserUse in fallback)
+- GeminiAdapter extended with getResultText() to expose session output for brief extraction
+- assembleBriefContext formats task/cost/review/brief preview for Gate 3 approval messages
+- No new packages; 20 new tests (10 estimator + 10 runner), 306 total passing
 #### Failure History
 
 ---
 
 ### 4.8 -- Docker and Secrets Configuration
-- **Status:** blocked
+- **Status:** complete
 - **Type:** infrastructure
 - **Contract:** contracts/4.8-docker-secrets.md
 - **Dependencies:** 4.7
@@ -477,6 +483,10 @@
 - **Acceptance:** Gemini and BrowserUse secrets wired, ResearchRunner instantiated at startup; Docker build succeeds
 
 #### Notes
+- browseruse_cloud_api_key added to docker-compose.yml secrets
+- ResearchRunner instantiated before code SessionRunner; graceful degradation if gemini_api_key missing
+- SIGTERM handler includes researchRunner?.stop() in both branches (with/without anthropic key)
+- No new packages; Docker build verified; 306 tests passing
 #### Failure History
 
 ---
@@ -512,3 +522,4 @@
 | 25      | 2026-04-01 | 4.4  | complete | —  | Researcher agent system prompt: anti-sycophancy directives, 3-phase methodology, depth-aware scoping (1–10), citation requirements, adversarial self-check. Content-only task. |
 | 26      | 2026-04-01 | 4.5  | complete | —  | Research types: ResearchBrief/Section/Source, DEPTH_CONFIGS (10 levels), parseResearchBrief parser, research contract template. No new packages. 16 new tests, 265 total. |
 | 27      | 2026-04-01 | 4.6  | complete | —  | Research fact-check reviewer: adversarial system prompt, runResearchReview with ReviewExecutor DI, reuses parseReviewResult. No new packages. 11 new tests, 276 total. |
+| 28      | 2026-04-02 | 4.7/4.8 | complete | —  | Research runner + Docker wiring: ResearchRunner orchestrates cost estimate→spend gate→Gemini researcher→fact-check review→research gate lifecycle. Cost estimator uses DEPTH_CONFIGS. GeminiAdapter.getResultText() for brief extraction. Gemini primary, Claude Sonnet Agent SDK fallback. browseruse_cloud_api_key added to Docker secrets. ResearchRunner wired in index.ts with graceful degradation. No new packages. 30 new tests, 306 total. |

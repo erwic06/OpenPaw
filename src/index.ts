@@ -9,6 +9,7 @@ import { initDatabase } from "./db/index.ts";
 import { initGates } from "./gates/index.ts";
 import { watchPlan } from "./plan/reader.ts";
 import { SessionRunner } from "./agents/runner.ts";
+import { ResearchRunner } from "./research/runner.ts";
 import { recoverOrphanedSessions } from "./agents/recovery.ts";
 
 const HEALTH_PORT = 9999;
@@ -16,6 +17,8 @@ const REPO_DIR = "/repo";
 const DB_PATH = "/data/nanoclaw.db";
 const PLAN_PATH = `${REPO_DIR}/implementation_plan.md`;
 const SYSTEM_PROMPT_PATH = `${REPO_DIR}/agents/coder/system_prompt.md`;
+const RESEARCHER_PROMPT_PATH = `${REPO_DIR}/agents/researcher/system_prompt.md`;
+const RESEARCHER_REVIEWER_PROMPT_PATH = `${REPO_DIR}/agents/researcher-reviewer/system_prompt.md`;
 const DEFAULT_BRANCH = "main";
 const WORKSPACES_DIR = "/workspaces";
 
@@ -71,6 +74,28 @@ if (recovered > 0) {
   console.log(`[nanoclaw] recovered ${recovered} orphaned session(s)`);
 }
 
+// --- Research Runner ---
+const geminiApiKey = secrets.get("gemini_api_key");
+const browserUseApiKey = secrets.get("browseruse_cloud_api_key");
+
+let researchRunner: ResearchRunner | null = null;
+
+if (geminiApiKey) {
+  researchRunner = new ResearchRunner({
+    db,
+    sendAlert,
+    geminiApiKey,
+    anthropicApiKey: anthropicApiKey ?? "",
+    browserUseDeps: { cloudApiKey: browserUseApiKey ?? "" },
+    planPath: PLAN_PATH,
+    systemPromptPath: RESEARCHER_PROMPT_PATH,
+    reviewerPromptPath: RESEARCHER_REVIEWER_PROMPT_PATH,
+  });
+  console.log("[nanoclaw] research runner initialized");
+} else {
+  console.warn("[nanoclaw] gemini_api_key missing — research pipeline disabled");
+}
+
 if (anthropicApiKey) {
   const runner = new SessionRunner({
     db,
@@ -105,11 +130,20 @@ if (anthropicApiKey) {
     console.log("[nanoclaw] SIGTERM received, shutting down...");
     watcher.stop();
     runner.stop();
+    researchRunner?.stop();
   });
 } else {
   console.warn(
     "[nanoclaw] missing anthropic API key — headless sessions disabled",
   );
+
+  // Still handle SIGTERM for research runner if it exists
+  if (researchRunner) {
+    process.on("SIGTERM", () => {
+      console.log("[nanoclaw] SIGTERM received, shutting down...");
+      researchRunner?.stop();
+    });
+  }
 }
 
 // --- Health endpoint ---

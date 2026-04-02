@@ -157,6 +157,12 @@ export class GeminiAdapter implements AgentAdapter {
     return this.sessions.get(sessionId)?.lastActivityMs;
   }
 
+  getResultText(sessionId: string): string {
+    const state = this.sessions.get(sessionId);
+    if (!state) throw new Error(`Unknown session: ${sessionId}`);
+    return state.resultText;
+  }
+
   async waitForCompletion(sessionId: string): Promise<void> {
     const state = this.sessions.get(sessionId);
     if (!state) throw new Error(`Unknown session: ${sessionId}`);
