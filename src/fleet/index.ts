@@ -21,5 +21,8 @@ export { matchesCron, nextCronTime } from "./cron.ts";
 export { CronScheduler } from "./scheduler.ts";
 export type { SchedulerDeps } from "./scheduler.ts";
 
+export { EventTriggerSystem } from "./events.ts";
+export type { EventTriggerDeps } from "./events.ts";
+
 export { routeOutput } from "./router.ts";
 export type { RoutingDeps, RoutingResult, SendMessageFn, SpawnSyncFn } from "./router.ts";

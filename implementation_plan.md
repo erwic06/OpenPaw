@@ -1021,7 +1021,7 @@
 ---
 
 ### 8.6 -- Event Trigger System
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/8.6-event-triggers.md
 - **Dependencies:** 8.1, 8.5
@@ -1030,6 +1030,12 @@
 - **Acceptance:** on_commit, on_task_complete, on_gate_approved triggers with deduplication; tests pass
 
 #### Notes
+- EventTriggerSystem with emit() for task_complete and gate_approved events
+- on_commit: fs.watch on .git/refs/heads/<branch>
+- Pattern matching: exact, wildcard (*), and glob prefix (6.* matches 6.1, 6.2)
+- Deduplication: skips re-trigger if agent has running agent_run in DB
+- updateDefinitions rebuilds event registry and restarts commit watchers
+- 13 tests, 608 total passing
 #### Failure History
 
 ---
@@ -1054,7 +1060,7 @@
 ---
 
 ### 8.8 -- Fleet Orchestrator and NanoClaw Integration
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/8.8-fleet-orchestrator.md
 - **Dependencies:** 8.3, 8.4, 8.5, 8.6, 8.7
