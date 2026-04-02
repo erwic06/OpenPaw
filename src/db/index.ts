@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { readFileSync } from "fs";
-import type { Session, HitlGate, CostEntry, PendingCommunication, Project } from "./types.ts";
+import type { Session, HitlGate, CostEntry, PendingCommunication, Project, AgentDefinitionRow, AgentRunRow } from "./types.ts";
 
 const SCHEMA_PATH = import.meta.dir + "/schema.sql";
 
@@ -218,4 +218,86 @@ export function updatePendingCommunication(db: Database, id: string, decision: s
 
 export function getPendingCommunications(db: Database): PendingCommunication[] {
   return db.prepare("SELECT * FROM pending_communications WHERE decision IS NULL").all() as PendingCommunication[];
+}
+
+// --- Agent Definitions ---
+
+export function insertAgentDefinition(db: Database, def: Omit<AgentDefinitionRow, "created_at" | "last_run_at">): void {
+  db.prepare(
+    `INSERT INTO agent_definitions (id, name, config_path, schedule_type, schedule_expression, enabled, next_run_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(def.id, def.name, def.config_path, def.schedule_type, def.schedule_expression, def.enabled, def.next_run_at, new Date().toISOString());
+}
+
+export function updateAgentDefinition(db: Database, id: string, updates: Partial<Pick<AgentDefinitionRow, "name" | "config_path" | "schedule_type" | "schedule_expression" | "enabled" | "next_run_at">>): void {
+  const fields: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
+  }
+
+  if (fields.length === 0) return;
+  values.push(id);
+  db.prepare(`UPDATE agent_definitions SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+}
+
+export function getAgentDefinition(db: Database, id: string): AgentDefinitionRow | null {
+  return (db.prepare("SELECT * FROM agent_definitions WHERE id = ?").get(id) as AgentDefinitionRow) ?? null;
+}
+
+export function getAllAgentDefinitions(db: Database): AgentDefinitionRow[] {
+  return db.prepare("SELECT * FROM agent_definitions ORDER BY name").all() as AgentDefinitionRow[];
+}
+
+export function getEnabledAgentDefinitions(db: Database): AgentDefinitionRow[] {
+  return db.prepare("SELECT * FROM agent_definitions WHERE enabled = 1 ORDER BY name").all() as AgentDefinitionRow[];
+}
+
+export function setAgentEnabled(db: Database, id: string, enabled: boolean): void {
+  db.prepare("UPDATE agent_definitions SET enabled = ? WHERE id = ?").run(enabled ? 1 : 0, id);
+}
+
+export function updateAgentLastRun(db: Database, id: string, lastRunAt: string): void {
+  db.prepare("UPDATE agent_definitions SET last_run_at = ? WHERE id = ?").run(lastRunAt, id);
+}
+
+export function updateAgentNextRun(db: Database, id: string, nextRunAt: string | null): void {
+  db.prepare("UPDATE agent_definitions SET next_run_at = ? WHERE id = ?").run(nextRunAt, id);
+}
+
+// --- Agent Runs ---
+
+export function insertAgentRun(db: Database, run: Omit<AgentRunRow, "ended_at" | "status" | "output_routed_to">): void {
+  db.prepare(
+    `INSERT INTO agent_runs (id, agent_id, session_id, triggered_by, trigger_detail, started_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(run.id, run.agent_id, run.session_id, run.triggered_by, run.trigger_detail, run.started_at);
+}
+
+export function updateAgentRun(db: Database, id: string, updates: Partial<Pick<AgentRunRow, "ended_at" | "status" | "output_routed_to" | "session_id">>): void {
+  const fields: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
+  }
+
+  if (fields.length === 0) return;
+  values.push(id);
+  db.prepare(`UPDATE agent_runs SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+}
+
+export function getAgentRunsByAgent(db: Database, agentId: string, limit: number = 50): AgentRunRow[] {
+  return db.prepare("SELECT * FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC LIMIT ?").all(agentId, limit) as AgentRunRow[];
+}
+
+export function getLatestAgentRun(db: Database, agentId: string): AgentRunRow | null {
+  return (db.prepare("SELECT * FROM agent_runs WHERE agent_id = ? ORDER BY started_at DESC LIMIT 1").get(agentId) as AgentRunRow) ?? null;
 }

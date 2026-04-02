@@ -58,6 +58,30 @@ CREATE TABLE IF NOT EXISTS projects (
     created_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS agent_definitions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    config_path TEXT NOT NULL,
+    schedule_type TEXT,
+    schedule_expression TEXT,
+    enabled BOOLEAN DEFAULT true,
+    last_run_at TIMESTAMP,
+    next_run_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS agent_runs (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT REFERENCES agent_definitions(id),
+    session_id TEXT REFERENCES sessions(id),
+    triggered_by TEXT NOT NULL,
+    trigger_detail TEXT,
+    started_at TIMESTAMP NOT NULL,
+    ended_at TIMESTAMP,
+    status TEXT,
+    output_routed_to TEXT
+);
+
 CREATE VIEW IF NOT EXISTS daily_spend_by_service AS
 SELECT date(logged_at) AS day, service, SUM(amount_usd) AS total
 FROM cost_log

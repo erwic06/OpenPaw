@@ -55,3 +55,27 @@ export interface PendingCommunication {
   decision: string | null;
   edited_content: string | null;
 }
+
+export interface AgentDefinitionRow {
+  id: string;
+  name: string;
+  config_path: string;
+  schedule_type: string | null;
+  schedule_expression: string | null;
+  enabled: number; // SQLite boolean: 0 or 1
+  last_run_at: string | null;
+  next_run_at: string | null;
+  created_at: string;
+}
+
+export interface AgentRunRow {
+  id: string;
+  agent_id: string;
+  session_id: string | null;
+  triggered_by: string;
+  trigger_detail: string | null;
+  started_at: string;
+  ended_at: string | null;
+  status: string | null;
+  output_routed_to: string | null;
+}

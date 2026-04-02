@@ -925,7 +925,7 @@
 ---
 
 ### 8.1 -- Agent Definition Types and DB Schema
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/8.1-agent-definition-types-db.md
 - **Dependencies:** none
@@ -934,12 +934,17 @@
 - **Acceptance:** AgentDefinition/AgentRun types, agent_definitions and agent_runs tables, CRUD functions; tests pass
 
 #### Notes
+- AgentDefinition with ScheduleConfig, OutputDestination (telegram/github/webapp), AdapterConfig (llm/service), ToolConfig
+- AgentRun with triggeredBy (schedule/manual/event), status tracking, output_routed_to JSON
+- 9 CRUD functions for agent_definitions, 4 for agent_runs
+- AgentDefinitionRow.enabled uses SQLite integer (0/1) for boolean
+- No new packages; 33 new tests, 489 total passing
 #### Failure History
 
 ---
 
 ### 8.2 -- Agent Definition Parser
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/8.2-agent-definition-parser.md
 - **Dependencies:** 8.1
@@ -967,7 +972,7 @@
 ---
 
 ### 8.4 -- ServiceAdapter
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/8.4-service-adapter.md
 - **Dependencies:** 8.1
@@ -1009,7 +1014,7 @@
 ---
 
 ### 8.7 -- Output Routing Engine
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/8.7-output-routing.md
 - **Dependencies:** 8.1
@@ -1092,3 +1097,4 @@
 | 36      | 2026-04-02 | —    | complete | —  | Phase 7+8 scaffolding: wrote 19 contracts (7.1-7.10 + 8.1-8.9), added Phase 7 and Phase 8 task entries to implementation plan. Phase 8 scaffolding ready for separate session. |
 | 37      | 2026-04-02 | 7.1-7.10 | complete | — | Phase 7 implementation: API router with URL-pattern matching and CF Access JWT auth. REST endpoints for sessions, gates, costs, projects, communications, tasks. WebSocket pub/sub via NanoClawEvents. CF Tunnel setup script. Next.js 15 frontend with dark amber theme, 6 tabs (overview, research, projects, content-review, automations), typed API/WS clients. All routes wired in index.ts with WS upgrade. Docker build verified. No new backend packages. 77 new backend tests, 456 total. |
 | 36      | 2026-04-02 | —    | complete | —  | Phase 6 scaffolding: wrote 9 contracts (6.1-6.9), added Phase 6 task entries to implementation plan, updated current phase to Phase 6. 379 tests passing. |
+| 38      | 2026-04-02 | 8.1  | complete | —  | Agent definition types and DB schema: AgentDefinition/AgentRun/ScheduleConfig/OutputDestination/AdapterConfig types in src/fleet/types.ts. agent_definitions and agent_runs tables in schema.sql. 13 CRUD functions in db/index.ts. No new packages. 33 new tests, 489 total. |
