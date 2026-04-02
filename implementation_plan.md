@@ -1,8 +1,8 @@
 # OpenPaw -- Implementation Plan
 
 **Project:** OpenPaw
-**Current Phase:** Phase 4 -- Research Pipeline
-**Last Updated:** 2026-03-31
+**Current Phase:** Phase 5 -- Observability & Alerting
+**Last Updated:** 2026-04-02
 
 ---
 
@@ -491,6 +491,90 @@
 
 ---
 
+### 5.1 -- Structured Alert System
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/5.1-structured-alerts.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/alerts/types.ts`, `src/alerts/formatter.ts`, `src/alerts/index.ts`
+- **Acceptance:** AlertType union, AlertPayload discriminated union, AlertSystem class with dedicated channel support; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 5.2 -- Budget Controls
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/5.2-budget-controls.md
+- **Dependencies:** 5.1
+- **Assigned:** interactive
+- **Artifacts:** `src/budget/types.ts`, `src/budget/index.ts`
+- **Acceptance:** BudgetEnforcer with 80% warning and 100% hard stop; wired into SessionRunner and ResearchRunner; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 5.3 -- Stuck Task Detection
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/5.3-stuck-task-detection.md
+- **Dependencies:** 5.1
+- **Assigned:** interactive
+- **Artifacts:** (modifies existing files)
+- **Acceptance:** 3+ failures pauses dispatch for task, sends stuck_task alert; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 5.4 -- Laminar Tracing Integration
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/5.4-laminar-tracing.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/tracing/index.ts`, `src/tracing/sanitize.ts`
+- **Acceptance:** Laminar SDK wraps session execution, secret sanitization, graceful no-op without key; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 5.5 -- SQL Cost Views
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/5.5-sql-cost-views.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** (modifies existing files)
+- **Acceptance:** 3 SQL views created during init, TypeScript query wrappers; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 5.6 -- Docker Wiring, Decision Logging, and Failure Mode Verification
+- **Status:** ready
+- **Type:** infrastructure
+- **Contract:** contracts/5.6-docker-wiring-verification.md
+- **Dependencies:** 5.1, 5.2, 5.3, 5.4, 5.5
+- **Assigned:** interactive
+- **Artifacts:** (modifies existing files)
+- **Acceptance:** All Phase 5 modules wired in index.ts, decision logging in gates, new Docker secrets, Docker build succeeds; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
 ## Session Log
 
 | Session | Date | Task | Status | Duration | Notes |
@@ -523,3 +607,4 @@
 | 26      | 2026-04-01 | 4.5  | complete | —  | Research types: ResearchBrief/Section/Source, DEPTH_CONFIGS (10 levels), parseResearchBrief parser, research contract template. No new packages. 16 new tests, 265 total. |
 | 27      | 2026-04-01 | 4.6  | complete | —  | Research fact-check reviewer: adversarial system prompt, runResearchReview with ReviewExecutor DI, reuses parseReviewResult. No new packages. 11 new tests, 276 total. |
 | 28      | 2026-04-02 | 4.7/4.8 | complete | —  | Research runner + Docker wiring: ResearchRunner orchestrates cost estimate→spend gate→Gemini researcher→fact-check review→research gate lifecycle. Cost estimator uses DEPTH_CONFIGS. GeminiAdapter.getResultText() for brief extraction. Gemini primary, Claude Sonnet Agent SDK fallback. browseruse_cloud_api_key added to Docker secrets. ResearchRunner wired in index.ts with graceful degradation. No new packages. 30 new tests, 306 total. |
+| 29      | 2026-04-02 | —    | complete | —  | Phase 5 scaffolding: wrote 6 contracts (5.1-5.6), added Phase 5 task entries to implementation plan, updated current phase. Fixed fragile parser test (hardcoded task count → invariant-based). 306 tests passing. |

@@ -13,13 +13,18 @@ beforeAll(async () => {
 describe("parsePlan", () => {
   it("parses all tasks from the real plan", () => {
     const tasks = parsePlan(realContent);
-    expect(tasks.length).toBe(26);
-    expect(tasks.map((t) => t.id)).toEqual([
+    // Task count grows as phases are added; check invariants instead
+    expect(tasks.length).toBeGreaterThanOrEqual(26);
+    // All Phase 2-4 tasks must be present
+    const ids = tasks.map((t) => t.id);
+    for (const expected of [
       "2.1", "2.2", "2.3", "2.4", "2.5", "2.6",
       "3.1", "3.2", "3.3", "3.4", "3.5", "3.6",
       "3.7", "3.8", "3.9", "3.10", "3.11", "3.12",
       "4.1", "4.2", "4.3", "4.4", "4.5", "4.6", "4.7", "4.8",
-    ]);
+    ]) {
+      expect(ids).toContain(expected);
+    }
   });
 
   it("populates all fields for task 2.1", () => {
