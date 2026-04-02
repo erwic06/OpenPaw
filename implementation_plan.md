@@ -1,7 +1,7 @@
 # OpenPaw -- Implementation Plan
 
 **Project:** OpenPaw
-**Current Phase:** Phase 5 -- Observability & Alerting
+**Current Phase:** Phase 6 -- Task Intake & Telegram Bot
 **Last Updated:** 2026-04-02
 
 ---
@@ -611,6 +611,132 @@
 
 ---
 
+### 6.1 -- Command Parser and Types
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/6.1-command-parser.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/intake/types.ts`, `src/intake/parser.ts`, `src/intake/index.ts`
+- **Acceptance:** ParsedCommand discriminated union for 6 commands, parseCommand with validation, barrel export; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 6.2 -- Planner Agent System Prompt
+- **Status:** ready
+- **Type:** content
+- **Contract:** contracts/6.2-planner-system-prompt.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `agents/planner/system_prompt.md`
+- **Acceptance:** System prompt with project planning and research planning modes, filesystem constraints, output format
+
+#### Notes
+#### Failure History
+
+---
+
+### 6.3 -- LLM Cost Estimator
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/6.3-llm-cost-estimator.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/intake/estimator.ts`
+- **Acceptance:** Async Haiku-tier LLM cost estimation with DEPTH_CONFIGS fallback; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 6.4 -- Telegram Command Dispatch
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/6.4-telegram-command-dispatch.md
+- **Dependencies:** 6.1
+- **Assigned:** interactive
+- **Artifacts:** `src/intake/dispatch.ts`
+- **Acceptance:** initCommandDispatch routes parsed commands to handler callbacks; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 6.5 -- Research Intake Flow
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/6.5-research-intake.md
+- **Dependencies:** 6.1, 6.3, 6.4
+- **Assigned:** interactive
+- **Artifacts:** `src/intake/research.ts`
+- **Acceptance:** /research and /dr flows with cost estimation, spend gate, Planner for /dr, ResearchRunner dispatch; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 6.6 -- Project Intake Flow
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/6.6-project-intake.md
+- **Dependencies:** 6.1, 6.2, 6.4
+- **Assigned:** interactive
+- **Artifacts:** `src/intake/project.ts`, `src/github/index.ts`
+- **Acceptance:** GitHub repo creation, scaffold, Planner session, mandatory plan gate; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 6.7 -- Coding Intake Flow
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/6.7-coding-intake.md
+- **Dependencies:** 6.1, 6.4
+- **Assigned:** interactive
+- **Artifacts:** `src/intake/coding.ts`
+- **Acceptance:** Project validation, task ID generation, plan append, SessionRunner dispatch; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 6.8 -- Status and Agents Commands
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/6.8-status-agents-commands.md
+- **Dependencies:** 6.4
+- **Assigned:** interactive
+- **Artifacts:** `src/intake/status.ts`
+- **Acceptance:** /status shows sessions, gates, spend; /agents shows placeholder; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 6.9 -- Docker Wiring and End-to-End Verification
+- **Status:** blocked
+- **Type:** infrastructure
+- **Contract:** contracts/6.9-docker-wiring-verification.md
+- **Dependencies:** 6.5, 6.6, 6.7, 6.8
+- **Assigned:** interactive
+- **Artifacts:** (modifies existing files)
+- **Acceptance:** All intake modules wired in index.ts, github_token Docker secret, graceful degradation; Docker build succeeds
+
+#### Notes
+#### Failure History
+
+---
+
 ## Session Log
 
 | Session | Date | Task | Status | Duration | Notes |
@@ -650,3 +776,4 @@
 | 33      | 2026-04-02 | 5.4  | complete | —  | Laminar tracing: @lmnr-ai/lmnr 0.8.15, initTracing/traceSession/shutdownTracing with no-op fallback, scrubSecrets sanitization. SessionRunner and ResearchRunner wrapped with trace metadata. 13 new tests, 361 total. |
 | 34      | 2026-04-02 | 5.5  | complete | —  | SQL cost views: daily_spend_by_service, monthly_spend_by_agent, most_expensive_sessions in schema.sql. TypeScript query wrappers in db/index.ts. No new packages. 12 new tests, 373 total. |
 | 35      | 2026-04-02 | 5.6  | complete | —  | Docker wiring: AlertSystem, BudgetEnforcer, Laminar tracing wired in index.ts. Decision logging JSONL with SHA-256 context hash in resolveGate. laminar_api_key + alerts_chat_id Docker secrets. Docker build verified. 6 new tests, 379 total. |
+| 36      | 2026-04-02 | —    | complete | —  | Phase 6 scaffolding: wrote 9 contracts (6.1-6.9), added Phase 6 task entries to implementation plan, updated current phase to Phase 6. 379 tests passing. |
