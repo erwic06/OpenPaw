@@ -435,7 +435,7 @@
 ---
 
 ### 4.6 -- Research Fact-Check Reviewer
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/4.6-research-reviewer.md
 - **Dependencies:** 4.5
@@ -444,12 +444,17 @@
 - **Acceptance:** Adversarial fact-checking prompt, runResearchReview function, reuses ReviewResult types; tests pass
 
 #### Notes
+- Adversarial system prompt: fabricated claims (critical), unsupported assertions (major), weak sourcing (minor), cross-model diversity emphasis
+- runResearchReview mirrors runCodeReview: ReviewExecutor DI, session/cost logging, soft pass on failure
+- Reuses parseReviewResult and ReviewResult/ReviewFinding types from src/review/index.ts (no duplication)
+- buildResearchReviewPrompt wraps brief in markdown fence
+- No new packages; 11 new tests, 276 total passing
 #### Failure History
 
 ---
 
 ### 4.7 -- Research Session Runner
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/4.7-research-runner.md
 - **Dependencies:** 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
@@ -506,3 +511,4 @@
 | 24      | 2026-04-01 | 4.3  | complete | —  | BrowserUse Cloud wrapper: browseUrl with API v3 session create/poll, getBrowserUseToolDeclaration for Gemini function calling. Content truncation, error-in-result pattern. No new packages. 13 new tests, 249 total. |
 | 25      | 2026-04-01 | 4.4  | complete | —  | Researcher agent system prompt: anti-sycophancy directives, 3-phase methodology, depth-aware scoping (1–10), citation requirements, adversarial self-check. Content-only task. |
 | 26      | 2026-04-01 | 4.5  | complete | —  | Research types: ResearchBrief/Section/Source, DEPTH_CONFIGS (10 levels), parseResearchBrief parser, research contract template. No new packages. 16 new tests, 265 total. |
+| 27      | 2026-04-01 | 4.6  | complete | —  | Research fact-check reviewer: adversarial system prompt, runResearchReview with ReviewExecutor DI, reuses parseReviewResult. No new packages. 11 new tests, 276 total. |
