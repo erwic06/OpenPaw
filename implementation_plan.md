@@ -944,7 +944,7 @@
 ---
 
 ### 8.2 -- Agent Definition Parser
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/8.2-agent-definition-parser.md
 - **Dependencies:** 8.1
@@ -953,12 +953,17 @@
 - **Acceptance:** Parses agent.md markdown into typed AgentDefinition with validation; tests pass
 
 #### Notes
+- Pure function parser: extractSections splits on `## ` headings, then per-section parsers for Identity/Schedule/Tools/Input/Output/Depth/Budget/Adapter
+- Stable ID derived from directory name in configPath (agents/<name>/agent.md)
+- Notion output skipped silently (type system only supports telegram/github/webapp)
+- 30 tests covering TBPN example, all schedule types, tools with nested config, error cases
+- No new packages; 519 total passing
 #### Failure History
 
 ---
 
 ### 8.3 -- Agent Definition Loader and File Watcher
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/8.3-agent-definition-loader.md
 - **Dependencies:** 8.1, 8.2

@@ -7,3 +7,5 @@ export type {
   AgentDefinition,
   AgentRun,
 } from "./types.ts";
+
+export { parseAgentDefinition } from "./parser.ts";
