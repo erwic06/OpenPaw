@@ -511,7 +511,7 @@
 ---
 
 ### 5.2 -- Budget Controls
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/5.2-budget-controls.md
 - **Dependencies:** 5.1
@@ -520,6 +520,13 @@
 - **Acceptance:** BudgetEnforcer with 80% warning and 100% hard stop; wired into SessionRunner and ResearchRunner; tests pass
 
 #### Notes
+- BudgetEnforcer with checkBudget() and enforceBudget() methods; DI via BudgetEnforcerDeps
+- Warn-once: tracks lastWarningDate to avoid duplicate 80% alerts per calendar day
+- Hard stop: sends budget_hard_stop alert, then requests spend gate; returns gate decision
+- SessionRunner.drainQueue: budget check before each dispatch; breaks loop on false
+- ResearchRunner.runResearch: budget check before cost estimation step
+- budgetEnforcer is optional in both RunnerDeps and ResearchRunnerDeps (existing tests unaffected)
+- No new packages; 16 new tests, 336 total passing
 #### Failure History
 
 ---
@@ -614,3 +621,4 @@
 | 28      | 2026-04-02 | 4.7/4.8 | complete | —  | Research runner + Docker wiring: ResearchRunner orchestrates cost estimate→spend gate→Gemini researcher→fact-check review→research gate lifecycle. Cost estimator uses DEPTH_CONFIGS. GeminiAdapter.getResultText() for brief extraction. Gemini primary, Claude Sonnet Agent SDK fallback. browseruse_cloud_api_key added to Docker secrets. ResearchRunner wired in index.ts with graceful degradation. No new packages. 30 new tests, 306 total. |
 | 29      | 2026-04-02 | —    | complete | —  | Phase 5 scaffolding: wrote 6 contracts (5.1-5.6), added Phase 5 task entries to implementation plan, updated current phase. Fixed fragile parser test (hardcoded task count → invariant-based). 306 tests passing. |
 | 30      | 2026-04-02 | 5.1  | complete | —  | Structured alert system: AlertType union (7 types), AlertPayload discriminated union, formatAlertMessage (HTML with emoji/bold/footer), AlertSystem class with dedicated alertsChatId + fallbackChatId routing. No new packages. 14 new tests, 320 total. |
+| 31      | 2026-04-02 | 5.2  | complete | —  | Budget controls: BudgetEnforcer with checkBudget/enforceBudget, warn-once at 80%, hard stop at 100% with spend gate. Integrated into SessionRunner.drainQueue and ResearchRunner.runResearch as optional field. No new packages. 16 new tests, 336 total. |

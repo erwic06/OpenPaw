@@ -17,6 +17,7 @@ import { runCodeReview } from "../review/index.ts";
 import type { ReviewResult } from "../review/types.ts";
 import { requestApproval as realRequestApproval } from "../gates/index.ts";
 import type { GateRequest, GateResult } from "../gates/types.ts";
+import type { BudgetEnforcer } from "../budget/index.ts";
 
 export interface RunnerDeps {
   db: Database;
@@ -38,6 +39,8 @@ export interface RunnerDeps {
   runReviewFn?: (task: Task, sandbox: SandboxHandle) => Promise<ReviewResult | null>;
   /** Override for testing. Replaces the HITL deploy gate request. */
   requestApprovalFn?: (request: GateRequest) => Promise<GateResult>;
+  /** Optional budget enforcement. When set, drainQueue checks before each dispatch. */
+  budgetEnforcer?: BudgetEnforcer;
 }
 
 /** Session tracking for monitoring cancel/activity routing. */
@@ -139,6 +142,13 @@ export class SessionRunner {
 
   private async drainQueue(): Promise<void> {
     while (this.queue.length > 0) {
+      if (this.deps.budgetEnforcer) {
+        const proceed = await this.deps.budgetEnforcer.enforceBudget();
+        if (!proceed) {
+          console.log("[runner] budget exceeded — dispatch paused");
+          break;
+        }
+      }
       this.busy = true;
       const task = this.queue.shift()!;
       try {

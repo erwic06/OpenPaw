@@ -20,6 +20,7 @@ import { logUsage, getSessionCost } from "../costs/index.ts";
 import { estimateResearchCost, formatCostEstimate } from "./estimator.ts";
 import type { CostEstimate } from "./estimator.ts";
 import { DEPTH_CONFIGS } from "./types.ts";
+import type { BudgetEnforcer } from "../budget/index.ts";
 
 export interface ResearchRunnerDeps {
   db: Database;
@@ -42,6 +43,8 @@ export interface ResearchRunnerDeps {
   requestApprovalFn?: (request: GateRequest) => Promise<GateResult>;
   /** Override cost estimation for testing. */
   estimateCostFn?: (depth: number, prompt: string) => CostEstimate;
+  /** Optional budget enforcement. When set, runResearch checks before cost estimation. */
+  budgetEnforcer?: BudgetEnforcer;
 }
 
 interface ActiveSession {
@@ -85,6 +88,15 @@ export class ResearchRunner {
     );
 
     try {
+      // 0. Budget check
+      if (this.deps.budgetEnforcer) {
+        const proceed = await this.deps.budgetEnforcer.enforceBudget();
+        if (!proceed) {
+          console.log("[research-runner] budget exceeded — dispatch paused");
+          return;
+        }
+      }
+
       // 1. Cost estimation
       const estimateFn = this.deps.estimateCostFn ?? estimateResearchCost;
       const estimate = estimateFn(depth, prompt);
