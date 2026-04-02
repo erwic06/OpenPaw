@@ -16,5 +16,10 @@ export {
   watchAgentDefinitions,
 } from "./loader.ts";
 
+export { matchesCron, nextCronTime } from "./cron.ts";
+
+export { CronScheduler } from "./scheduler.ts";
+export type { SchedulerDeps } from "./scheduler.ts";
+
 export { routeOutput } from "./router.ts";
 export type { RoutingDeps, RoutingResult, SendMessageFn, SpawnSyncFn } from "./router.ts";

@@ -1001,7 +1001,7 @@
 ---
 
 ### 8.5 -- Cron Scheduler
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/8.5-cron-scheduler.md
 - **Dependencies:** 8.1, 8.3
@@ -1010,12 +1010,18 @@
 - **Acceptance:** 5-field cron evaluator, CronScheduler with 60s loop, idempotent triggers; tests pass
 
 #### Notes
+- matchesCron: 5-field evaluator with *, lists (1,3,5), ranges (1-5), steps (*/5, 1-10/2)
+- nextCronTime: minute-by-minute iteration (max 1 year)
+- CronScheduler: 60s setInterval loop, checks enabled cron-type defs from DB
+- Idempotent: skips if last_run_at is within same cron minute
+- DI now() for deterministic testing; triggerManual for on-demand execution
+- 29 tests (20 cron + 9 scheduler), 595 total passing
 #### Failure History
 
 ---
 
 ### 8.6 -- Event Trigger System
-- **Status:** blocked
+- **Status:** ready
 - **Type:** code
 - **Contract:** contracts/8.6-event-triggers.md
 - **Dependencies:** 8.1, 8.5
