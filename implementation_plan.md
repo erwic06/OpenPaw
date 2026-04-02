@@ -1,7 +1,7 @@
 # OpenPaw -- Implementation Plan
 
 **Project:** OpenPaw
-**Current Phase:** Phase 6 -- Task Intake & Telegram Bot
+**Current Phase:** Phase 7 -- OpenPaw Web (Dashboard & Control Plane)
 **Last Updated:** 2026-04-02
 
 ---
@@ -737,6 +737,319 @@
 
 ---
 
+### 7.1 -- API Router and Auth Middleware
+- **Status:** complete
+- **Type:** code
+- **Contract:** contracts/7.1-api-router-auth.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/api/router.ts`, `src/api/auth.ts`, `src/api/types.ts`, `src/api/index.ts`
+- **Acceptance:** URL-pattern router with method dispatch, CF Access JWT validation, health endpoint preserved; tests pass
+
+#### Notes
+- URL pattern router with :param extraction, method dispatch, 404/405 handling
+- CF Access JWT validation with JWKS caching and RS256 signature verification
+- Dev mode bypass when teamDomain is empty
+- ApiDeps DI interface, jsonResponse/errorResponse helpers
+- 25 new tests
+#### Failure History
+
+---
+
+### 7.2 -- Core Data REST Endpoints
+- **Status:** complete
+- **Type:** code
+- **Contract:** contracts/7.2-core-rest-endpoints.md
+- **Dependencies:** 7.1
+- **Assigned:** interactive
+- **Artifacts:** `src/api/routes/sessions.ts`, `src/api/routes/gates.ts`, `src/api/routes/costs.ts`, `src/api/routes/projects.ts`, `src/api/routes/communications.ts`
+- **Acceptance:** Sessions, gates, costs, projects, communications endpoints; projects table added; tests pass
+
+#### Notes
+- Projects table added to schema.sql; ProjectRow type added
+- 10 new DB query functions: getSessionById, getActiveSessions, getRecentSessions, getSessionsForTask, getGateById, getSessionCost, getCommunicationById, getRecentCommunications, insertProject, getProject, getAllProjects
+- resolveGateById exposed from gates module for web API use (parallel to Telegram path)
+- 5 route modules: sessions, gates, costs, projects, communications
+- 24 new endpoint tests
+#### Failure History
+
+---
+
+### 7.3 -- Task Creation and Action Endpoints
+- **Status:** complete
+- **Type:** code
+- **Contract:** contracts/7.3-action-endpoints.md
+- **Dependencies:** 7.2
+- **Assigned:** interactive
+- **Artifacts:** `src/api/routes/tasks.ts`
+- **Acceptance:** POST /api/tasks and POST /api/projects with validation; 501 fallback if intake not wired; tests pass
+
+#### Notes
+- POST /api/tasks (research, coding) and POST /api/projects with body validation
+- GET /api/tasks/:id reads from plan parser; GET /api/tasks/:id/sessions queries DB
+- 501 fallback when Phase 6 intake functions not yet wired
+- allRoutes() unifies all route modules
+- 14 new tests
+#### Failure History
+
+---
+
+### 7.4 -- WebSocket Session Streaming and Notifications
+- **Status:** complete
+- **Type:** code
+- **Contract:** contracts/7.4-websocket-streaming.md
+- **Dependencies:** 7.1
+- **Assigned:** interactive
+- **Artifacts:** `src/api/ws.ts`
+- **Acceptance:** NanoClawEvents pub/sub, session stream and notification WS endpoints; tests pass
+
+#### Notes
+- NanoClawEvents class: channel-based pub/sub with subscribe/unsubscribe/unsubscribeAll
+- parseWsPath: extracts session ID and channel from WS URL paths
+- createWsMessage helper with auto-timestamp
+- 14 new tests
+#### Failure History
+
+---
+
+### 7.5 -- Cloudflare Tunnel and Access Configuration
+- **Status:** complete
+- **Type:** infrastructure
+- **Contract:** contracts/7.5-cf-infrastructure.md
+- **Dependencies:** 7.1
+- **Assigned:** interactive
+- **Artifacts:** `scripts/setup-cf-tunnel.sh`, `docker-compose.yml`
+- **Acceptance:** CF Tunnel pointing to NanoClaw, CF Access with GitHub OAuth + MFA, setup script documented
+
+#### Notes
+- scripts/setup-cf-tunnel.sh: creates tunnel, routes DNS, writes config, documents manual CF Access steps
+- cf_team_domain and cf_audience_tag added to docker-compose.yml secrets
+- Auth middleware reads both from secrets for JWT validation
+#### Failure History
+
+---
+
+### 7.6 -- Next.js Project Scaffold and Layout Shell
+- **Status:** complete
+- **Type:** code
+- **Contract:** contracts/7.6-nextjs-scaffold.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `web/` directory with Next.js project, layout, sidebar, header, API/WS clients
+- **Acceptance:** Next.js build succeeds, dark theme with amber accent, vertical tab bar, typed API/WS clients
+
+#### Notes
+- Next.js 15.3.2 App Router in web/ directory
+- Tailwind CSS v4 with dark theme (zinc-950 bg, amber-500 accent)
+- Sidebar: 5 tabs (Overview, Research, Projects, Content Review, Automations)
+- Header: command input bar + daily spend badge
+- API client: typed fetch wrapper with ApiError class
+- WS client: auto-reconnecting with exponential backoff
+- Shared types in web/src/lib/types.ts
+#### Failure History
+
+---
+
+### 7.7 -- Overview and Cost Dashboard Pages
+- **Status:** complete
+- **Type:** code
+- **Contract:** contracts/7.7-overview-cost-pages.md
+- **Dependencies:** 7.6, 7.2
+- **Assigned:** interactive
+- **Artifacts:** `web/src/app/overview/page.tsx`, `web/src/components/summary-cards.tsx`, `web/src/components/spend-bar.tsx`, `web/src/components/activity-feed.tsx`
+- **Acceptance:** Overview tab with spend bar, summary cards, activity feed with gate actions; build succeeds
+
+#### Notes
+- Spend bar with progress bar and percentage display
+- 4 summary cards (Active Sessions, Pending Gates, Total Sessions, Automations)
+- Activity feed with session status indicators and inline gate approve/deny
+- WebSocket-driven auto-refresh via notifications channel
+#### Failure History
+
+---
+
+### 7.8 -- Research and Projects Pages
+- **Status:** complete
+- **Type:** code
+- **Contract:** contracts/7.8-research-projects-pages.md
+- **Dependencies:** 7.6, 7.2
+- **Assigned:** interactive
+- **Artifacts:** `web/src/app/research/page.tsx`, `web/src/app/projects/page.tsx`, `web/src/app/projects/[id]/page.tsx`, `web/src/components/session-panel.tsx`, `web/src/components/panel-layout.tsx`
+- **Acceptance:** Research tab, Projects tab with workspace view, tmux-like session panels with WS streaming; build succeeds
+
+#### Notes
+- Research tab: active/completed sections filtered by agent=researcher
+- Projects tab: project list with cards → project workspace with session sidebar
+- Project workspace: session sidebar + session panel with WS stream log (last 500 lines)
+- Session panels show agent, task, model, cost, status indicator
+#### Failure History
+
+---
+
+### 7.9 -- Content Review, New Task Flow, and HITL Gate UI
+- **Status:** complete
+- **Type:** code
+- **Contract:** contracts/7.9-content-review-newtask-hitl.md
+- **Dependencies:** 7.6, 7.2
+- **Assigned:** interactive
+- **Artifacts:** `web/src/app/content-review/page.tsx`, `web/src/components/new-task-dialog.tsx`, `web/src/components/gate-inline.tsx`
+- **Acceptance:** Content Review tab, New Task dialog, HITL gate inline component; build succeeds
+
+#### Notes
+- Content Review tab: pending queue with approve/edit & approve/reject controls
+- Inline editor for Edit & Approve with save/cancel
+- Recently decided section shows past communication decisions
+- Automations tab: Phase 8 placeholder
+#### Failure History
+
+---
+
+### 7.10 -- Docker Wiring, Vercel Deploy, and E2E Verification
+- **Status:** complete
+- **Type:** infrastructure
+- **Contract:** contracts/7.10-docker-wiring-e2e.md
+- **Dependencies:** 7.3, 7.4, 7.5, 7.9
+- **Assigned:** interactive
+- **Artifacts:** (modifies existing files)
+- **Acceptance:** All API routes wired in index.ts, WebSocket handlers active, Docker build succeeds, Vercel config exists
+
+#### Notes
+- Bun.serve<WsChannelData> with full router, WS upgrade, CF Access auth
+- Health endpoint remains unauthenticated; /api/* routes auth-gated when CF configured
+- NanoClawEvents wired for WS pub/sub; events subscribe/unsubscribe on WS open/close
+- resolveGateById from gates module wired into ApiDeps
+- Vercel config at web/vercel.json
+- Docker build verified; 456 tests passing
+#### Failure History
+
+---
+
+### 8.1 -- Agent Definition Types and DB Schema
+- **Status:** ready
+- **Type:** code
+- **Contract:** contracts/8.1-agent-definition-types-db.md
+- **Dependencies:** none
+- **Assigned:** interactive
+- **Artifacts:** `src/fleet/types.ts`, `src/fleet/index.ts`, `src/db/schema.sql`, `src/db/types.ts`, `src/db/index.ts`
+- **Acceptance:** AgentDefinition/AgentRun types, agent_definitions and agent_runs tables, CRUD functions; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 8.2 -- Agent Definition Parser
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/8.2-agent-definition-parser.md
+- **Dependencies:** 8.1
+- **Assigned:** interactive
+- **Artifacts:** `src/fleet/parser.ts`
+- **Acceptance:** Parses agent.md markdown into typed AgentDefinition with validation; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 8.3 -- Agent Definition Loader and File Watcher
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/8.3-agent-definition-loader.md
+- **Dependencies:** 8.1, 8.2
+- **Assigned:** interactive
+- **Artifacts:** `src/fleet/loader.ts`
+- **Acceptance:** Directory scan, DB sync, fs.watch with debounce and polling fallback; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 8.4 -- ServiceAdapter
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/8.4-service-adapter.md
+- **Dependencies:** 8.1
+- **Assigned:** interactive
+- **Artifacts:** `src/agents/service-adapter.ts`
+- **Acceptance:** AgentAdapter implementation for external HTTP services with DI fetchFn; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 8.5 -- Cron Scheduler
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/8.5-cron-scheduler.md
+- **Dependencies:** 8.1, 8.3
+- **Assigned:** interactive
+- **Artifacts:** `src/fleet/scheduler.ts`, `src/fleet/cron.ts`
+- **Acceptance:** 5-field cron evaluator, CronScheduler with 60s loop, idempotent triggers; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 8.6 -- Event Trigger System
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/8.6-event-triggers.md
+- **Dependencies:** 8.1, 8.5
+- **Assigned:** interactive
+- **Artifacts:** `src/fleet/events.ts`
+- **Acceptance:** on_commit, on_task_complete, on_gate_approved triggers with deduplication; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 8.7 -- Output Routing Engine
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/8.7-output-routing.md
+- **Dependencies:** 8.1
+- **Assigned:** interactive
+- **Artifacts:** `src/fleet/router.ts`, `src/fleet/router-telegram.ts`, `src/fleet/router-github.ts`
+- **Acceptance:** Telegram and GitHub routing, Notion stub, per-destination error isolation; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 8.8 -- Fleet Orchestrator and NanoClaw Integration
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/8.8-fleet-orchestrator.md
+- **Dependencies:** 8.3, 8.4, 8.5, 8.6, 8.7
+- **Assigned:** interactive
+- **Artifacts:** `src/fleet/orchestrator.ts`, `src/index.ts`
+- **Acceptance:** FleetOrchestrator wired in index.ts, triggerAgent lifecycle, Docker build succeeds; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
+### 8.9 -- Template Agent Definitions and E2E Verification
+- **Status:** blocked
+- **Type:** code
+- **Contract:** contracts/8.9-template-agents-e2e.md
+- **Dependencies:** 8.8
+- **Assigned:** interactive
+- **Artifacts:** `agents/tbpn-digest/agent.md`, `agents/daily-standup/agent.md`, `agents/pr-reviewer/agent.md`
+- **Acceptance:** 3 template agents parse/load/sync correctly, scheduler timing verified, Docker build succeeds; tests pass
+
+#### Notes
+#### Failure History
+
+---
+
 ## Session Log
 
 | Session | Date | Task | Status | Duration | Notes |
@@ -776,4 +1089,6 @@
 | 33      | 2026-04-02 | 5.4  | complete | —  | Laminar tracing: @lmnr-ai/lmnr 0.8.15, initTracing/traceSession/shutdownTracing with no-op fallback, scrubSecrets sanitization. SessionRunner and ResearchRunner wrapped with trace metadata. 13 new tests, 361 total. |
 | 34      | 2026-04-02 | 5.5  | complete | —  | SQL cost views: daily_spend_by_service, monthly_spend_by_agent, most_expensive_sessions in schema.sql. TypeScript query wrappers in db/index.ts. No new packages. 12 new tests, 373 total. |
 | 35      | 2026-04-02 | 5.6  | complete | —  | Docker wiring: AlertSystem, BudgetEnforcer, Laminar tracing wired in index.ts. Decision logging JSONL with SHA-256 context hash in resolveGate. laminar_api_key + alerts_chat_id Docker secrets. Docker build verified. 6 new tests, 379 total. |
+| 36      | 2026-04-02 | —    | complete | —  | Phase 7+8 scaffolding: wrote 19 contracts (7.1-7.10 + 8.1-8.9), added Phase 7 and Phase 8 task entries to implementation plan. Phase 8 scaffolding ready for separate session. |
+| 37      | 2026-04-02 | 7.1-7.10 | complete | — | Phase 7 implementation: API router with URL-pattern matching and CF Access JWT auth. REST endpoints for sessions, gates, costs, projects, communications, tasks. WebSocket pub/sub via NanoClawEvents. CF Tunnel setup script. Next.js 15 frontend with dark amber theme, 6 tabs (overview, research, projects, content-review, automations), typed API/WS clients. All routes wired in index.ts with WS upgrade. Docker build verified. No new backend packages. 77 new backend tests, 456 total. |
 | 36      | 2026-04-02 | —    | complete | —  | Phase 6 scaffolding: wrote 9 contracts (6.1-6.9), added Phase 6 task entries to implementation plan, updated current phase to Phase 6. 379 tests passing. |

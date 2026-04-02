@@ -248,5 +248,37 @@ export function getPendingGatesList(): HitlGate[] {
   return dbGetPendingGates(deps.db);
 }
 
+/**
+ * Resolve a gate by ID from the web API. If the gate is also tracked in the
+ * in-memory pending map (Telegram flow), resolves it there too. Otherwise
+ * updates the database directly.
+ */
+export async function resolveGateById(
+  gateId: string,
+  decision: "approved" | "denied",
+  feedback?: string,
+): Promise<{ success: boolean; error?: string }> {
+  if (!deps) return { success: false, error: "gates not initialized" };
+
+  // Check gate exists in DB
+  const gate = deps.db.prepare("SELECT * FROM hitl_gates WHERE id = ?").get(gateId) as HitlGate | null;
+  if (!gate) return { success: false, error: "gate not found" };
+  if (gate.decision) return { success: false, error: "gate already decided" };
+
+  // If tracked in pending map (Telegram flow), resolve through that path
+  const pending = pendingGates.get(gateId);
+  if (pending) {
+    if (feedback) pending.feedback.push(feedback);
+    resolveGate(gateId, decision);
+  } else {
+    // Direct DB update for gates not in Telegram flow
+    const decidedAt = new Date().toISOString();
+    updateGate(deps.db, gateId, decision);
+    logDecision(deps.db, gateId, decision, decidedAt);
+  }
+
+  return { success: true };
+}
+
 // Expose for testing
 export { handleMessage as _handleMessage };

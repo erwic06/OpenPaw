@@ -49,6 +49,15 @@ CREATE TABLE IF NOT EXISTS pending_communications (
     edited_content TEXT
 );
 
+CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    repo_url TEXT,
+    workspace_path TEXT,
+    created_at TIMESTAMP NOT NULL
+);
+
 CREATE VIEW IF NOT EXISTS daily_spend_by_service AS
 SELECT date(logged_at) AS day, service, SUM(amount_usd) AS total
 FROM cost_log

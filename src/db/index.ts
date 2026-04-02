@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { readFileSync } from "fs";
-import type { Session, HitlGate, CostEntry, PendingCommunication } from "./types.ts";
+import type { Session, HitlGate, CostEntry, PendingCommunication, Project } from "./types.ts";
 
 const SCHEMA_PATH = import.meta.dir + "/schema.sql";
 
@@ -64,6 +64,41 @@ export function getOrphanedSessions(db: Database): Session[] {
   return db
     .prepare("SELECT * FROM sessions WHERE ended_at IS NULL")
     .all() as Session[];
+}
+
+export function getSessionById(db: Database, id: string): Session | null {
+  return (db.prepare("SELECT * FROM sessions WHERE id = ?").get(id) as Session) ?? null;
+}
+
+export function getActiveSessions(db: Database): Session[] {
+  return db.prepare("SELECT * FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC").all() as Session[];
+}
+
+export function getRecentSessions(db: Database, limit: number = 50): Session[] {
+  return db.prepare("SELECT * FROM sessions ORDER BY started_at DESC LIMIT ?").all(limit) as Session[];
+}
+
+export function getSessionsForTask(db: Database, taskId: string): Session[] {
+  return db.prepare("SELECT * FROM sessions WHERE task_id = ? ORDER BY started_at DESC").all(taskId) as Session[];
+}
+
+export function getGateById(db: Database, id: string): HitlGate | null {
+  return (db.prepare("SELECT * FROM hitl_gates WHERE id = ?").get(id) as HitlGate) ?? null;
+}
+
+export function getSessionCost(db: Database, sessionId: string): number {
+  const result = db.prepare(
+    "SELECT COALESCE(SUM(amount_usd), 0) as total FROM cost_log WHERE session_id = ?",
+  ).get(sessionId) as { total: number };
+  return result.total;
+}
+
+export function getCommunicationById(db: Database, id: string): PendingCommunication | null {
+  return (db.prepare("SELECT * FROM pending_communications WHERE id = ?").get(id) as PendingCommunication) ?? null;
+}
+
+export function getRecentCommunications(db: Database, limit: number = 50): PendingCommunication[] {
+  return db.prepare("SELECT * FROM pending_communications WHERE decision IS NOT NULL ORDER BY decided_at DESC LIMIT ?").all(limit) as PendingCommunication[];
 }
 
 // --- HITL Gates ---
@@ -147,6 +182,23 @@ export function getMostExpensiveSessions(
     started_at: string;
     total_cost: number;
   }>;
+}
+
+// --- Projects ---
+
+export function insertProject(db: Database, project: Omit<Project, "created_at">): void {
+  db.prepare(
+    `INSERT INTO projects (id, name, description, repo_url, workspace_path, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(project.id, project.name, project.description, project.repo_url, project.workspace_path, new Date().toISOString());
+}
+
+export function getProject(db: Database, id: string): Project | null {
+  return (db.prepare("SELECT * FROM projects WHERE id = ?").get(id) as Project) ?? null;
+}
+
+export function getAllProjects(db: Database): Project[] {
+  return db.prepare("SELECT * FROM projects ORDER BY created_at DESC").all() as Project[];
 }
 
 // --- Pending Communications ---

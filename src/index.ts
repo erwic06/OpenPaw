@@ -6,7 +6,7 @@ import {
   onMessage,
 } from "./messaging/index.ts";
 import { initDatabase } from "./db/index.ts";
-import { initGates } from "./gates/index.ts";
+import { initGates, resolveGateById } from "./gates/index.ts";
 import { watchPlan } from "./plan/reader.ts";
 import { SessionRunner } from "./agents/runner.ts";
 import { ResearchRunner } from "./research/runner.ts";
@@ -14,6 +14,9 @@ import { recoverOrphanedSessions } from "./agents/recovery.ts";
 import { AlertSystem } from "./alerts/index.ts";
 import { BudgetEnforcer, DEFAULT_BUDGET_CONFIG } from "./budget/index.ts";
 import { initTracing, shutdownTracing } from "./tracing/index.ts";
+import { createRouter, validateCfAccess, NanoClawEvents, parseWsPath } from "./api/index.ts";
+import type { ApiDeps, AuthDeps } from "./api/index.ts";
+import { allRoutes } from "./api/routes/index.ts";
 
 const HEALTH_PORT = 9999;
 const REPO_DIR = "/repo";
@@ -178,15 +181,90 @@ if (anthropicApiKey) {
   });
 }
 
-// --- Health endpoint ---
-const server = Bun.serve({
+// --- API Server ---
+const events = new NanoClawEvents();
+
+const apiDeps: ApiDeps = {
+  db,
+  resolveGateFn: resolveGateById,
+  planPath: PLAN_PATH,
+  events,
+};
+
+const cfTeamDomain = secrets.get("cf_team_domain") ?? "";
+const cfAudienceTag = secrets.get("cf_audience_tag") ?? "";
+const authDeps: AuthDeps = {
+  teamDomain: cfTeamDomain,
+  audienceTag: cfAudienceTag,
+};
+
+const router = createRouter(allRoutes(), apiDeps);
+
+interface WsChannelData {
+  channel: string;
+  sessionId?: string;
+}
+
+const server = Bun.serve<WsChannelData>({
   port: HEALTH_PORT,
-  fetch() {
-    return new Response("ok", { status: 200 });
+  async fetch(req, server) {
+    const url = new URL(req.url);
+
+    // Health check (unauthenticated)
+    if (url.pathname === "/health") {
+      return new Response("ok", { status: 200 });
+    }
+
+    // WebSocket upgrade
+    if (req.headers.get("upgrade") === "websocket") {
+      // Validate auth for WS connections
+      if (cfTeamDomain) {
+        const valid = await validateCfAccess(req, authDeps);
+        if (!valid) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+      }
+      const wsInfo = parseWsPath(url.pathname);
+      if (!wsInfo) {
+        return new Response("Not found", { status: 404 });
+      }
+      const upgraded = server.upgrade(req, { data: wsInfo });
+      if (upgraded) return undefined as unknown as Response;
+      return new Response("WebSocket upgrade failed", { status: 400 });
+    }
+
+    // Auth check for API routes
+    if (url.pathname.startsWith("/api/") && cfTeamDomain) {
+      const valid = await validateCfAccess(req, authDeps);
+      if (!valid) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    return router(req);
+  },
+  websocket: {
+    open(ws) {
+      events.subscribe(ws.data.channel, ws);
+    },
+    close(ws) {
+      events.unsubscribe(ws.data.channel, ws);
+    },
+    message(_ws, _msg) {
+      // Handle pong responses (no action needed)
+    },
   },
 });
 
 console.log(
-  `[nanoclaw] NanoClaw daemon running (health: http://localhost:${server.port})`,
+  `[nanoclaw] NanoClaw API running on http://localhost:${server.port}`,
 );
+if (cfTeamDomain) {
+  console.log(`[nanoclaw] CF Access auth enabled (team: ${cfTeamDomain})`);
+} else {
+  console.log("[nanoclaw] CF Access auth disabled (dev mode)");
+}
 console.log(`[nanoclaw] secrets: ${secrets.size}, pid: ${process.pid}`);

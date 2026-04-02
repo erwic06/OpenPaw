@@ -24,14 +24,6 @@ export interface HitlGate {
   context_summary: string | null;
 }
 
-export interface CostEntry {
-  id: number;
-  session_id: string | null;
-  service: string;
-  amount_usd: number;
-  logged_at: string;
-}
-
 export interface Project {
   id: string;
   name: string;
@@ -54,4 +46,10 @@ export interface PendingCommunication {
   decided_at: string | null;
   decision: string | null;
   edited_content: string | null;
+}
+
+export interface DailySpend {
+  date: string;
+  total: number;
+  breakdown: Array<{ day: string; service: string; total: number }>;
 }

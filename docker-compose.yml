@@ -21,6 +21,8 @@ services:
       - browseruse_cloud_api_key
       - laminar_api_key
       - alerts_chat_id
+      - cf_team_domain
+      - cf_audience_tag
     ports:
       - "9999:9999"
 
@@ -41,6 +43,10 @@ secrets:
     file: ~/.nanoclaw/secrets/laminar_api_key
   alerts_chat_id:
     file: ~/.nanoclaw/secrets/alerts_chat_id
+  cf_team_domain:
+    file: ~/.nanoclaw/secrets/cf_team_domain
+  cf_audience_tag:
+    file: ~/.nanoclaw/secrets/cf_audience_tag
 
 volumes:
   nanoclaw-data:
