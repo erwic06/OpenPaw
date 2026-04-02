@@ -20,6 +20,9 @@ export type { FallbackDeps } from "./fallback.ts";
 export { CodexAdapter } from "./codex-adapter.ts";
 export type { CodexAdapterDeps } from "./codex-adapter.ts";
 
+export { GeminiAdapter } from "./gemini-adapter.ts";
+export type { GeminiAdapterDeps, GenAILike } from "./gemini-adapter.ts";
+
 export { SessionMonitor } from "./monitor.ts";
 export type { MonitorDeps } from "./monitor.ts";
 

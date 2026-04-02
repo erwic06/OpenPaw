@@ -356,7 +356,7 @@
 ---
 
 ### 4.2 -- Gemini Adapter
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/4.2-gemini-adapter.md
 - **Dependencies:** 4.1
@@ -365,6 +365,12 @@
 - **Acceptance:** GeminiAdapter implements AgentAdapter, spawns Gemini sessions, tracks usage; tests pass
 
 #### Notes
+- @google/genai 1.47.0 (4 deps: google-auth-library, p-retry, protobufjs, ws); 0 audit vulnerabilities
+- DI via GeminiAdapterDeps: genaiFactory override for testing, optional toolExecutor for function calling
+- Mirrors LLMAdapter/CodexAdapter pattern: background runSession, cumulative token tracking, AbortController cancel
+- Model mapping: research → gemini-3.1-pro-preview, light → gemini-3.1-flash-lite-preview
+- Function calling: generic call/response cycle via toolExecutor DI; no BrowserUse execution (task 4.3)
+- 20 new tests, 236 total passing
 #### Failure History
 
 ---
@@ -479,3 +485,4 @@
 | 20      | 2026-03-31 | 3.12 | complete | —  | Restart recovery: getOrphanedSessions DB query, recoverOrphanedSessions resets tasks to ready and marks sessions FAILED. Wired in index.ts before plan watcher. Fixed fragile parser test. No new packages. 14 new tests, 214 total. |
 | 21      | 2026-03-31 | —    | complete | —  | Phase 4 scaffolding: wrote 8 contracts (4.1-4.8), added Phase 4 task entries to implementation plan, updated current phase. Fixed stale OpenAIAdapter refs in 3.7 contract. Updated project_spec.md (Daytona/Cubic → local workspaces/Claude Reviewer). 214 tests passing. |
 | 22      | 2026-03-31 | 4.1  | complete | —  | Model roster expansion: "research" ModelTier, "google" Provider, Gemini 3.1 Pro/Flash Lite pricing. Research roster: Gemini primary, Sonnet fallback. 2 new tests, 216 total. |
+| 23      | 2026-04-01 | 4.2  | complete | —  | Gemini adapter: GeminiAdapter implements AgentAdapter with @google/genai 1.47.0. Streaming via generateContentStream, cumulative token tracking, function calling cycle with toolExecutor DI. No runner modifications. 20 new tests, 236 total. |
