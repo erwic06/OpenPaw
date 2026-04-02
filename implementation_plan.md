@@ -492,7 +492,7 @@
 ---
 
 ### 5.1 -- Structured Alert System
-- **Status:** ready
+- **Status:** complete
 - **Type:** code
 - **Contract:** contracts/5.1-structured-alerts.md
 - **Dependencies:** none
@@ -501,6 +501,11 @@
 - **Acceptance:** AlertType union, AlertPayload discriminated union, AlertSystem class with dedicated channel support; tests pass
 
 #### Notes
+- AlertType union (7 types), AlertPayload discriminated union with per-type fields, AlertDeps interface
+- formatAlertMessage produces HTML: emoji header, bold field labels, arrow footer — matches design doc Section 5 format
+- AlertSystem class routes to alertsChatId when provided, falls back to fallbackChatId
+- Replicates escapeHtml pattern from src/messaging/telegram.ts (not imported to avoid coupling)
+- No new packages; 14 new tests, 320 total passing
 #### Failure History
 
 ---
@@ -608,3 +613,4 @@
 | 27      | 2026-04-01 | 4.6  | complete | —  | Research fact-check reviewer: adversarial system prompt, runResearchReview with ReviewExecutor DI, reuses parseReviewResult. No new packages. 11 new tests, 276 total. |
 | 28      | 2026-04-02 | 4.7/4.8 | complete | —  | Research runner + Docker wiring: ResearchRunner orchestrates cost estimate→spend gate→Gemini researcher→fact-check review→research gate lifecycle. Cost estimator uses DEPTH_CONFIGS. GeminiAdapter.getResultText() for brief extraction. Gemini primary, Claude Sonnet Agent SDK fallback. browseruse_cloud_api_key added to Docker secrets. ResearchRunner wired in index.ts with graceful degradation. No new packages. 30 new tests, 306 total. |
 | 29      | 2026-04-02 | —    | complete | —  | Phase 5 scaffolding: wrote 6 contracts (5.1-5.6), added Phase 5 task entries to implementation plan, updated current phase. Fixed fragile parser test (hardcoded task count → invariant-based). 306 tests passing. |
+| 30      | 2026-04-02 | 5.1  | complete | —  | Structured alert system: AlertType union (7 types), AlertPayload discriminated union, formatAlertMessage (HTML with emoji/bold/footer), AlertSystem class with dedicated alertsChatId + fallbackChatId routing. No new packages. 14 new tests, 320 total. |
