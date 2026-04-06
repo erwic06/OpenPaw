@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "openpaw": {
+      "command": "bun",
+      "args": ["run", "src/mcp/server.ts"],
+      "cwd": "/Users/ericwong/openpaw"
+    }
+  }
+}

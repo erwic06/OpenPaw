@@ -12,6 +12,7 @@
     "@anthropic-ai/claude-code": "2.1.87",
     "@google/genai": "1.47.0",
     "@lmnr-ai/lmnr": "0.8.15",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "@openai/codex-sdk": "0.117.0",
     "grammy": "1.41.1",
     "zod": "4.3.6"
